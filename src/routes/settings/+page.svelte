@@ -4,6 +4,7 @@ import { onMount } from 'svelte';
 
 // フォームデータ
 let lightningAddress = '';
+let nostrPrivateKey = '';
 let coinosId = '';
 let coinosPassword = '';
 let showPassword = false;
@@ -17,6 +18,7 @@ let errors: Record<string, string> = {};
 onMount(() => {
   if (typeof window !== 'undefined') {
     lightningAddress = localStorage.getItem('lightningAddress') || '';
+    nostrPrivateKey = localStorage.getItem('nostrPrivateKey') || '';
     coinosId = localStorage.getItem('coinosId') || '';
     coinosPassword = localStorage.getItem('coinosPassword') || '';
   }
@@ -31,6 +33,13 @@ function validateForm(): boolean {
     errors.lightningAddress = 'ライトニングアドレスは必須です';
   } else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(lightningAddress)) {
     errors.lightningAddress = '正しいメールアドレス形式で入力してください（例：user@domain.com）';
+  }
+
+  // Nostr秘密鍵のバリデーション
+  if (!nostrPrivateKey.trim()) {
+    errors.nostrPrivateKey = 'Nostr秘密鍵は必須です';
+  } else if (!nostrPrivateKey.startsWith('nsec1')) {
+    errors.nostrPrivateKey = 'nsec1で始まる有効な秘密鍵を入力してください';
   }
 
   // coinos-idのバリデーション
@@ -50,6 +59,7 @@ function validateForm(): boolean {
 function handleSave() {
   if (validateForm()) {
     localStorage.setItem('lightningAddress', lightningAddress);
+    localStorage.setItem('nostrPrivateKey', nostrPrivateKey);
     localStorage.setItem('coinosId', coinosId);
     localStorage.setItem('coinosPassword', coinosPassword);
 
@@ -74,11 +84,13 @@ function togglePasswordVisibility() {
 function handleClearData() {
   if (confirm('保存されているすべての設定データを削除しますか？この操作は取り消せません。')) {
     localStorage.removeItem('lightningAddress');
+    localStorage.removeItem('nostrPrivateKey');
     localStorage.removeItem('coinosId');
     localStorage.removeItem('coinosPassword');
 
     // フォームをクリア
     lightningAddress = '';
+    nostrPrivateKey = '';
     coinosId = '';
     coinosPassword = '';
 
@@ -154,6 +166,24 @@ function handleClearData() {
           />
           {#if errors.lightningAddress}
             <p class="mt-1 text-sm text-red-600">{errors.lightningAddress}</p>
+          {/if}
+        </div>
+
+        <!-- Nostr秘密鍵 -->
+        <div>
+          <label for="nostr-private-key" class="block text-sm font-medium text-gray-700 mb-2">
+            Nostr秘密鍵 (nsec形式)
+          </label>
+          <input
+            id="nostr-private-key"
+            type="password"
+            bind:value={nostrPrivateKey}
+            placeholder="nsec1..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            class:border-red-500={errors.nostrPrivateKey}
+          />
+          {#if errors.nostrPrivateKey}
+            <p class="mt-1 text-sm text-red-600">{errors.nostrPrivateKey}</p>
           {/if}
         </div>
 
