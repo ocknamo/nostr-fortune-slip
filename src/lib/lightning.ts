@@ -1,5 +1,3 @@
-import { bech32 } from 'bech32';
-
 /**
  * ライトニングアドレスの正規表現
  */
@@ -121,45 +119,4 @@ export class LightningAddress {
       throw new Error('Failed to get invoice');
     }
   }
-
-  /**
-   * ライトニングアドレスをLNURL形式に変換
-   */
-  toLnurl(): string {
-    if (!this.lightningAddressStr) {
-      throw new Error('No lightning address set');
-    }
-
-    const url = `https://${this.domain}/.well-known/lnurlp/${this.userName}`;
-    // ブラウザ環境ではBufferの代わりにTextEncoderを使用
-    const encoder = new TextEncoder();
-    const bytes = encoder.encode(url);
-    const words = bech32.toWords(bytes);
-    return bech32.encode('lnurl', words, 2000);
-  }
-
-  /**
-   * ライトニングアドレス文字列を取得
-   */
-  toString(): string {
-    return this.lightningAddressStr;
-  }
-
-  /**
-   * 有効なアドレスかどうかを確認
-   */
-  hasValidAddress(): boolean {
-    return !!this.lightningAddressStr;
-  }
-}
-
-/**
- * 1 satのインボイスを取得するヘルパー関数
- */
-export async function getOneStatInvoice(lightningAddress: string): Promise<string> {
-  const address = new LightningAddress(lightningAddress);
-  await address.fetchAddressData();
-
-  const invoice = await address.getInvoice(1000); // 1 sat = 1000 millisats
-  return invoice.pr;
 }

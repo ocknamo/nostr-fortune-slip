@@ -32,18 +32,3 @@ export async function generateLightningQRCode(invoice: string): Promise<string> 
     throw new Error('QR code generation failed');
   }
 }
-
-/**
- * 汎用QRコード生成関数
- * @param data QRコードにエンコードするデータ
- * @returns Data URL形式のQRコード画像
- */
-export async function generateQRCode(data: string): Promise<string> {
-  try {
-    const qrCodeDataURL = await QRCode.toDataURL(data, QR_OPTIONS);
-    return qrCodeDataURL;
-  } catch (error) {
-    console.error('Failed to generate QR code:', error);
-    throw new Error('QR code generation failed');
-  }
-}

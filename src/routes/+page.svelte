@@ -1,8 +1,15 @@
 <script lang="ts">
 import { goto } from '$app/navigation';
 import { onMount } from 'svelte';
-import { decodeNsec, createTextEvent, createZapRequest, publishEvent } from '$lib/nostr';
-import { LightningAddress } from '$lib/lightning';
+import {
+  decodeNsec,
+  createTextEvent,
+  createZapRequest,
+  publishEvent,
+  Metadata,
+  createMetadataEvent,
+  getZapInvoiceFromEndpoint,
+} from '$lib/nostr';
 import { generateLightningQRCode } from '$lib/qrcode';
 
 // UI状態
@@ -52,30 +59,36 @@ async function generateQRCode() {
     const textEvent = createTextEvent(privateKeyBytes, 'test');
     await publishEvent(textEvent);
 
-    // 3. ライトニングアドレスからLNURL-payデータを取得
-    const address = new LightningAddress(lightningAddress);
-    await address.fetchAddressData();
+    // 3. nostter風の実装: recipientのmetadata eventを作成（簡易版）
+    // 実際のアプリではリレーから取得するが、ここでは設定値から作成
+    const recipientPubkey = textEvent.pubkey; // 自分自身にzapする場合
+    const metadataEvent = createMetadataEvent(recipientPubkey, lightningAddress);
+    const metadata = new Metadata(metadataEvent);
 
-    // 4. LNURL形式に変換
-    const lnurl = address.toLnurl();
+    // 4. zapUrl取得
+    const zapUrl = await metadata.zapUrl();
+    if (zapUrl === null) {
+      throw new Error(`Zapエンドポイントが見つかりません。ライトニングアドレス: ${lightningAddress}`);
+    }
+
+    console.debug('[zap endpoint]', zapUrl);
 
     // 5. Zapリクエストを作成
     const zapRequest = createZapRequest(
       privateKeyBytes,
-      textEvent.pubkey, // recipient is the same as sender for this use case
-      textEvent.id,
-      lnurl,
+      textEvent, // 完全なeventオブジェクト
       1000, // 1 sat = 1000 millisats
+      '', // コメント
     );
 
-    // 6. インボイスを取得
-    const invoice = await address.getInvoice(1000);
+    // 6. Zapインボイスを取得
+    const invoice = await getZapInvoiceFromEndpoint(zapUrl, 1000, zapRequest);
 
     // 7. QRコードを生成
     const qrCode = await generateLightningQRCode(invoice.pr);
     qrCodeDataUrl = qrCode;
 
-    successMessage = 'QRコードが正常に生成されました！';
+    successMessage = 'nostter風Zap対応QRコードが正常に生成されました！';
   } catch (error) {
     console.error('QR code generation failed:', error);
     errorMessage = error instanceof Error ? error.message : 'QRコードの生成に失敗しました。';
