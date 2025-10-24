@@ -41,7 +41,7 @@ describe('Metadata', () => {
       display_name: 'Test User',
       lud16: 'test@example.com',
     };
-    
+
     const event: NostrEvent = {
       id: 'test-id',
       pubkey: 'test-pubkey',
@@ -53,7 +53,7 @@ describe('Metadata', () => {
     };
 
     const metadata = new Metadata(event);
-    
+
     expect(metadata.content).toEqual(validContent);
     expect(metadata.canZap).toBe(true);
   });
@@ -71,11 +71,11 @@ describe('Metadata', () => {
 
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const metadata = new Metadata(event);
-    
+
     expect(metadata.content).toBeUndefined();
     expect(metadata.canZap).toBe(false);
     expect(consoleSpy).toHaveBeenCalled();
-    
+
     consoleSpy.mockRestore();
   });
 
@@ -114,10 +114,10 @@ describe('Metadata', () => {
     vi.mocked(nip57.getZapEndpoint).mockResolvedValue('https://example.com/zap');
 
     const metadata = new Metadata(event);
-    
+
     const url1 = await metadata.zapUrl();
     const url2 = await metadata.zapUrl();
-    
+
     expect(url1).toBe('https://example.com/zap');
     expect(url2).toBe('https://example.com/zap');
     expect(nip57.getZapEndpoint).toHaveBeenCalledTimes(1);
@@ -133,18 +133,14 @@ describe('decodeNsec', () => {
     });
 
     const result = decodeNsec('nsec1testkey');
-    
+
     expect(result).toBe(mockSecretKey);
     expect(nip19.decode).toHaveBeenCalledWith('nsec1testkey');
   });
 
   it('should throw error for invalid nsec format', () => {
-    expect(() => decodeNsec('npub1testkey')).toThrow(
-      'Invalid nsec format. Must start with nsec1'
-    );
-    expect(() => decodeNsec('invalid')).toThrow(
-      'Invalid nsec format. Must start with nsec1'
-    );
+    expect(() => decodeNsec('npub1testkey')).toThrow('Invalid nsec format. Must start with nsec1');
+    expect(() => decodeNsec('invalid')).toThrow('Invalid nsec format. Must start with nsec1');
   });
 
   it('should throw error for invalid decoded type', () => {
@@ -168,6 +164,7 @@ describe('createTextEvent', () => {
       tags: [],
       content: 'test content',
       sig: 'test-sig',
+      // biome-ignore lint/suspicious/noExplicitAny: test
     } as any;
 
     const { getPublicKey, finalizeEvent } = await import('nostr-tools');
@@ -175,7 +172,7 @@ describe('createTextEvent', () => {
     vi.mocked(finalizeEvent).mockReturnValue(mockEvent);
 
     const result = createTextEvent(privateKey, 'test content');
-    
+
     expect(result).toEqual(mockEvent);
   });
 });
@@ -205,6 +202,7 @@ describe('createZapRequest', () => {
       id: 'zap-id',
       pubkey: 'zap-pubkey',
       sig: 'zap-sig',
+      // biome-ignore lint/suspicious/noExplicitAny: test
     } as any;
 
     vi.mocked(nip57.makeZapRequest).mockReturnValue(mockZapRequest);
@@ -212,7 +210,7 @@ describe('createZapRequest', () => {
     vi.mocked(finalizeEvent).mockReturnValue(mockSignedEvent);
 
     const result = createZapRequest(privateKey, targetEvent, 5000, 'test zap');
-    
+
     expect(result).toEqual(mockSignedEvent);
     expect(nip57.makeZapRequest).toHaveBeenCalledWith({
       event: targetEvent,
@@ -226,7 +224,7 @@ describe('createZapRequest', () => {
 describe('createMetadataEvent', () => {
   it('should create metadata event with lud16', () => {
     const result = createMetadataEvent('test-pubkey', 'test@example.com');
-    
+
     expect(result.kind).toBe(0);
     expect(result.pubkey).toBe('test-pubkey');
     expect(JSON.parse(result.content)).toEqual({ lud16: 'test@example.com' });
@@ -234,7 +232,7 @@ describe('createMetadataEvent', () => {
 
   it('should create metadata event without lud16', () => {
     const result = createMetadataEvent('test-pubkey');
-    
+
     expect(result.kind).toBe(0);
     expect(result.pubkey).toBe('test-pubkey');
     expect(JSON.parse(result.content)).toEqual({});
@@ -263,16 +261,10 @@ describe('getZapInvoiceFromEndpoint', () => {
       sig: 'zap-sig',
     };
 
-    const result = await getZapInvoiceFromEndpoint(
-      'https://example.com/zap',
-      5000,
-      zapRequest
-    );
+    const result = await getZapInvoiceFromEndpoint('https://example.com/zap', 5000, zapRequest);
 
     expect(result).toEqual(mockInvoice);
-    expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining('https://example.com/zap?amount=5000&nostr=')
-    );
+    expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('https://example.com/zap?amount=5000&nostr='));
   });
 
   it('should handle fetch error', async () => {
@@ -291,9 +283,9 @@ describe('getZapInvoiceFromEndpoint', () => {
       sig: 'zap-sig',
     };
 
-    await expect(
-      getZapInvoiceFromEndpoint('https://example.com/zap', 5000, zapRequest)
-    ).rejects.toThrow('Failed to get Zap invoice from endpoint');
+    await expect(getZapInvoiceFromEndpoint('https://example.com/zap', 5000, zapRequest)).rejects.toThrow(
+      'Failed to get Zap invoice from endpoint',
+    );
   });
 
   it('should handle error response', async () => {
@@ -317,13 +309,14 @@ describe('getZapInvoiceFromEndpoint', () => {
       sig: 'zap-sig',
     };
 
-    await expect(
-      getZapInvoiceFromEndpoint('https://example.com/zap', 5000, zapRequest)
-    ).rejects.toThrow('Failed to get Zap invoice from endpoint');
+    await expect(getZapInvoiceFromEndpoint('https://example.com/zap', 5000, zapRequest)).rejects.toThrow(
+      'Failed to get Zap invoice from endpoint',
+    );
   });
 });
 
 describe('publishEvent', () => {
+  // biome-ignore lint/suspicious/noExplicitAny: test
   let mockPoolInstance: any;
 
   beforeEach(() => {
@@ -356,16 +349,13 @@ describe('publishEvent', () => {
     mockPoolInstance.publish.mockReturnValue([mockPromise]);
 
     const publishPromise = publishEvent(mockEvent);
-    
+
     await publishPromise;
-    
+
     // Fast forward timers for cleanup
     vi.advanceTimersByTime(1000);
 
-    expect(mockPoolInstance.publish).toHaveBeenCalledWith(
-      expect.any(Array),
-      mockEvent
-    );
+    expect(mockPoolInstance.publish).toHaveBeenCalledWith(expect.any(Array), mockEvent);
     expect(mockPoolInstance.close).toHaveBeenCalled();
   });
 
@@ -384,8 +374,6 @@ describe('publishEvent', () => {
     const mockPromise = Promise.reject(new Error('Relay connection failed'));
     mockPoolInstance.publish.mockReturnValue([mockPromise]);
 
-    await expect(publishEvent(mockEvent)).rejects.toThrow(
-      'Failed to publish to any relay'
-    );
+    await expect(publishEvent(mockEvent)).rejects.toThrow('Failed to publish to any relay');
   });
 });

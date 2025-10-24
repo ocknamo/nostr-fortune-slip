@@ -21,7 +21,7 @@ export interface LNURLPayResponse {
  */
 export interface InvoiceResponse {
   pr: string; // bolt11 invoice
-  routes?: any[];
+  routes?: [];
   status?: 'ERROR';
   reason?: string;
 }
@@ -32,7 +32,6 @@ export interface InvoiceResponse {
 export class LightningAddress {
   private domain: string = '';
   private userName: string = '';
-  private lightningAddressStr: string = '';
   public data: LNURLPayResponse | null = null;
 
   constructor(lightningAddressString: string) {
@@ -40,7 +39,6 @@ export class LightningAddress {
       throw new Error('Invalid lightning address format');
     }
 
-    this.lightningAddressStr = lightningAddressString;
     const [userName, domain] = lightningAddressString.split('@');
     this.domain = domain;
     this.userName = userName;

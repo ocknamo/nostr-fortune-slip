@@ -18,22 +18,15 @@ describe('LightningAddress', () => {
     it('should create LightningAddress with valid address', () => {
       const address = 'user@example.com';
       const lightningAddress = new LightningAddress(address);
-      
+
       expect(lightningAddress).toBeInstanceOf(LightningAddress);
       expect(lightningAddress.data).toBeNull();
     });
 
     it('should throw error for invalid address format', () => {
-      const invalidAddresses = [
-        'invalid-address',
-        '@example.com',
-        'user@',
-        '',
-        'user@@example.com',
-        'user@example',
-      ];
+      const invalidAddresses = ['invalid-address', '@example.com', 'user@', '', 'user@@example.com', 'user@example'];
 
-      invalidAddresses.forEach(address => {
+      invalidAddresses.forEach((address) => {
         expect(() => new LightningAddress(address)).toThrow('Invalid lightning address format');
       });
     });
@@ -45,7 +38,7 @@ describe('LightningAddress', () => {
         'user_name@example-domain.org', // underscores and hyphens
       ];
 
-      edgeCases.forEach(address => {
+      edgeCases.forEach((address) => {
         expect(() => new LightningAddress(address)).not.toThrow();
       });
     });
@@ -53,7 +46,7 @@ describe('LightningAddress', () => {
 
   describe('fetchAddressData', () => {
     const validAddress = 'user@example.com';
-    
+
     it('should fetch and set address data successfully', async () => {
       const mockResponse: LNURLPayResponse = {
         callback: 'https://example.com/callback',
@@ -71,9 +64,7 @@ describe('LightningAddress', () => {
       const lightningAddress = new LightningAddress(validAddress);
       await lightningAddress.fetchAddressData();
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://example.com/.well-known/lnurlp/user'
-      );
+      expect(mockFetch).toHaveBeenCalledWith('https://example.com/.well-known/lnurlp/user');
       expect(lightningAddress.data).toEqual(mockResponse);
     });
 
@@ -85,9 +76,7 @@ describe('LightningAddress', () => {
 
       const lightningAddress = new LightningAddress(validAddress);
 
-      await expect(lightningAddress.fetchAddressData()).rejects.toThrow(
-        'Failed to fetch lightning address data'
-      );
+      await expect(lightningAddress.fetchAddressData()).rejects.toThrow('Failed to fetch lightning address data');
     });
 
     it('should handle error response from server', async () => {
@@ -103,16 +92,14 @@ describe('LightningAddress', () => {
 
       const lightningAddress = new LightningAddress(validAddress);
 
-      await expect(lightningAddress.fetchAddressData()).rejects.toThrow(
-        'Failed to fetch lightning address data'
-      );
+      await expect(lightningAddress.fetchAddressData()).rejects.toThrow('Failed to fetch lightning address data');
     });
   });
 
   describe('getInvoice', () => {
     const validAddress = 'user@example.com';
     let lightningAddress: LightningAddress;
-    
+
     beforeEach(async () => {
       const mockResponse: LNURLPayResponse = {
         callback: 'https://example.com/callback',
@@ -145,33 +132,27 @@ describe('LightningAddress', () => {
       const amount = 5000; // within min/max range
       const invoice = await lightningAddress.getInvoice(amount);
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://example.com/callback?amount=5000'
-      );
+      expect(mockFetch).toHaveBeenCalledWith('https://example.com/callback?amount=5000');
       expect(invoice).toEqual(mockInvoice);
     });
 
     it('should throw error for amount too high', async () => {
       const amount = 2000000; // exceeds maxSendable
 
-      await expect(lightningAddress.getInvoice(amount)).rejects.toThrow(
-        'Amount must be between 1 and 1000 sats'
-      );
+      await expect(lightningAddress.getInvoice(amount)).rejects.toThrow('Amount must be between 1 and 1000 sats');
     });
 
     it('should throw error for amount too low', async () => {
       const amount = 500; // below minSendable
 
-      await expect(lightningAddress.getInvoice(amount)).rejects.toThrow(
-        'Amount must be between 1 and 1000 sats'
-      );
+      await expect(lightningAddress.getInvoice(amount)).rejects.toThrow('Amount must be between 1 and 1000 sats');
     });
 
     it('should throw error when data not loaded', async () => {
       const newAddress = new LightningAddress('test@example.com');
-      
+
       await expect(newAddress.getInvoice(5000)).rejects.toThrow(
-        'Lightning address data not loaded. Call fetchAddressData() first'
+        'Lightning address data not loaded. Call fetchAddressData() first',
       );
     });
 
@@ -187,9 +168,7 @@ describe('LightningAddress', () => {
         json: () => Promise.resolve(errorResponse),
       });
 
-      await expect(lightningAddress.getInvoice(5000)).rejects.toThrow(
-        'Failed to get invoice'
-      );
+      await expect(lightningAddress.getInvoice(5000)).rejects.toThrow('Failed to get invoice');
     });
   });
 });
