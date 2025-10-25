@@ -13,6 +13,7 @@ Nostr Fortune Slipは、NostrプロトコルとLightning Networkを統合した�
 - **Zap検知機能**: リアルタイムでZap Receiptを検知し、おみくじ結果を表示
 - **フォーチュンメッセージ**: Zap検知後に送信者へメンション付きでラッキーナンバー（1-100）を送信
 - **設定管理**: ライトニングアドレス、Nostr秘密鍵の安全な管理
+- **Zap検証設定**: 直接Nostr zapの許可/不許可を設定可能（セキュリティレベルの調整）
 - **レスポンシブUI**: モバイルファーストなTailwind CSSベースのデザイン
 - **セキュリティ**: LocalStorage使用時の適切な警告表示
 
@@ -152,6 +153,9 @@ npm run fix
    - **Nostr秘密鍵**: `nsec1...` 形式
    - **Coinos ID**: Coinosアカウント（現在未使用）
    - **Coinosパスワード**: Coinosパスワード（現在未使用）
+   - **Nostrへの直接のzapを許可**: 
+     - 有効（デフォルト）: NostrイベントQRコードとLightning InvoiceQRコード両方を表示
+     - 無効: Lightning InvoiceQRコードのみ表示し、より厳密なzap検証を実行
 
 ### 2. フォーチュンおみくじ
 
