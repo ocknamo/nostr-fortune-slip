@@ -10,6 +10,7 @@ import {
   getZapInvoiceFromEndpoint,
   subscribeToZapReceipts,
   createNeventUri,
+  handleZapReceived,
   type ZapReceiptSubscription,
   type NostrEvent,
 } from '$lib/nostr';
@@ -69,24 +70,51 @@ function stopZapMonitoring() {
   currentTargetEventId = null;
 }
 
-function onZapDetected(zapReceipt: NostrEvent) {
+async function onZapDetected(zapReceipt: NostrEvent) {
   console.log('[Fortune Slip] Zap detected!', zapReceipt);
 
   // QRコードを非表示
   qrCodeDataUrl = '';
   neventQrCodeDataUrl = '';
 
-  // ランダム数字を生成（1-20）
-  randomNumber = Math.floor(Math.random() * 20) + 1;
+  try {
+    // フォーチュン機能を実行（メンション付きkind1イベントを送信）
+    if (currentTargetEventId && nostrPrivateKey) {
+      const fortuneResult = await handleZapReceived(zapReceipt, currentTargetEventId, nostrPrivateKey);
 
-  // 状態を更新
-  zapDetected = true;
-  isWaitingForZap = false;
+      if (fortuneResult.success && fortuneResult.luckyNumber) {
+        console.log('[Fortune Slip] Fortune message sent successfully!');
+        successMessage = 'Zapを受信しました！フォーチュンメッセージを送信しました🎉';
+        // メッセージ送信で使ったのと同じラッキーナンバーを使用
+        randomNumber = fortuneResult.luckyNumber;
+      } else {
+        console.warn('[Fortune Slip] Failed to send fortune message');
+        successMessage = 'Zapを受信しました！';
+        // エラーの場合は別途生成
+        randomNumber = Math.floor(Math.random() * 100) + 1;
+      }
+    } else {
+      // 設定不備の場合は別途生成
+      randomNumber = Math.floor(Math.random() * 100) + 1;
+    }
 
-  // サブスクリプション停止
-  stopZapMonitoring();
+    // 状態を更新
+    zapDetected = true;
+    isWaitingForZap = false;
 
-  successMessage = 'Zapを受信しました!';
+    // サブスクリプション停止
+    stopZapMonitoring();
+  } catch (error) {
+    console.error('[Fortune Slip] Error handling zap:', error);
+
+    // エラーが発生してもUI上では成功として表示
+    randomNumber = Math.floor(Math.random() * 100) + 1;
+    zapDetected = true;
+    isWaitingForZap = false;
+    stopZapMonitoring();
+
+    successMessage = 'Zapを受信しました！';
+  }
 }
 
 function resetFortuneSlip() {
@@ -253,7 +281,7 @@ async function generateQRCode() {
                   <span class="text-blue-800 font-medium">Zapの受信を待機中...</span>
                 </div>
                 <p class="text-sm text-blue-600 mt-2">
-                  QRコードをスキャンして1 satを送金してください。支払いが確認されるとおみくじの結果が表示されます。
+                  QRコードをスキャンして1 satを送金してください。支払いが確認されるとおみくじの結果が表示され、あなたにフォーチュンメッセージが送信されます。
                 </p>
               </div>
             {/if}

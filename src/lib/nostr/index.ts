@@ -7,6 +7,9 @@ export { decodeNsec, createTextEvent, createZapRequest, createMetadataEvent, cre
 // Zap関連をエクスポート
 export { getZapInvoiceFromEndpoint, validateZapReceipt, subscribeToZapReceipts } from './zap.js';
 
+// Fortune機能をエクスポート
+export { handleZapReceived, generateLuckyNumber, createFortuneMessage } from './fortune.js';
+
 // ユーティリティをエクスポート
 export { publishEvent } from './utils.js';
 
