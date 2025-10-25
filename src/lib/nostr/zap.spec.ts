@@ -198,20 +198,6 @@ describe('validateZapReceipt', () => {
 
     consoleSpy.mockRestore();
   });
-
-  it('should reject mismatched zap request ID', () => {
-    const targetEventId = 'target-event-id';
-    const zapRequest = createMockZapRequest();
-    const zapReceipt = createMockZapReceipt(targetEventId, 'wrong-zap-request-id');
-
-    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const result = validateZapReceipt(zapReceipt, targetEventId, zapRequest);
-
-    expect(result).toBe(false);
-    expect(consoleSpy).toHaveBeenCalledWith('Zap receipt description ID mismatch');
-
-    consoleSpy.mockRestore();
-  });
 });
 
 describe('subscribeToZapReceipts', () => {

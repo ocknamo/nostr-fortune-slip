@@ -9,3 +9,5 @@ export { getZapInvoiceFromEndpoint, validateZapReceipt, subscribeToZapReceipts }
 
 // ユーティリティをエクスポート
 export { publishEvent } from './utils.js';
+
+export { RELAYS } from './relay.js';

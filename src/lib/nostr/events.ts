@@ -1,7 +1,6 @@
 import { nip19, nip57, getPublicKey, finalizeEvent } from 'nostr-tools';
 import type { NostrEvent, MetadataContent } from './types.js';
-
-const RELAYS = ['wss://relay.damus.io/', 'wss://nos.lol/', 'wss://relay.nostr.band/'];
+import { RELAYS } from './relay.js';
 
 /**
  * nsec形式の秘密鍵をhex形式に変換

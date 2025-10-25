@@ -1,7 +1,6 @@
 import { SimplePool } from 'nostr-tools';
 import type { NostrEvent } from './types.js';
-
-const RELAYS = ['wss://relay.damus.io/', 'wss://nos.lol/', 'wss://relay.nostr.band/'];
+import { RELAYS } from './relay.js';
 
 /**
  * リレーにイベントを送信

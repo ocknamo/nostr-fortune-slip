@@ -1,8 +1,7 @@
 import { SimplePool } from 'nostr-tools';
 import type { Event, Filter } from 'nostr-tools';
 import type { NostrEvent, ZapReceiptSubscription } from './types.js';
-
-const RELAYS = ['wss://relay.damus.io/', 'wss://nos.lol/', 'wss://relay.nostr.band/'];
+import { RELAYS } from './relay.js';
 
 /**
  * Zapインボイスを直接取得（nostter風の実装）
@@ -68,16 +67,17 @@ export function validateZapReceipt(zapReceipt: NostrEvent, targetEventId: string
     }
 
     // descriptionがzap requestと一致することを確認
-    try {
-      const description = JSON.parse(descriptionTag[1]);
-      if (description.id !== zapRequest.id) {
-        console.warn('Zap receipt description ID mismatch');
-        return false;
-      }
-    } catch (error) {
-      console.warn('Invalid zap receipt description JSON:', error);
-      return false;
-    }
+    // Eventへの直接zapも有効にするためコメントアウト
+    // try {
+    //   const description = JSON.parse(descriptionTag[1]);
+    //   if (description.id !== zapRequest.id) {
+    //     console.warn('Zap receipt description ID mismatch');
+    //     return false;
+    //   }
+    // } catch (error) {
+    //   console.warn('Invalid zap receipt description JSON:', error);
+    //   return false;
+    // }
 
     return true;
   } catch (error) {
