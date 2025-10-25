@@ -73,7 +73,6 @@ src/
 │   ├── nostr/              # Nostr関連機能（モジュール化）
 │   │   ├── index.ts        # 統合エクスポート
 │   │   ├── types.ts        # 型定義
-│   │   ├── metadata.ts     # Metadataクラス
 │   │   ├── events.ts       # イベント作成機能
 │   │   ├── zap.ts          # Zap関連機能
 │   │   ├── utils.ts        # ユーティリティ機能
