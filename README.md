@@ -192,6 +192,7 @@ npm run fix
 - [nostr-tools](https://github.com/nbd-wtf/nostr-tools) - Nostr操作ライブラリ
 - [SvelteKit](https://kit.svelte.dev/) - フルスタックWebフレームワーク
 - [Tailwind CSS](https://tailwindcss.com/) - ユーティリティファーストCSSフレームワーク
+- [nostter](https://github.com/SnowCait/nostter) - Zapの実装を参考にさせていただきました
 
 ## サポート
 
