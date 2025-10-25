@@ -30,6 +30,9 @@ Nostr Fortune Slipは、NostrプロトコルとLightning Networkを統合した�
 - **Nostr秘密鍵**: nsec形式での入力
 - **Coinos ID**: 必須入力（今回の機能では使用しない）
 - **Coinosパスワード**: 必須入力、表示/非表示切り替え機能付き（今回の機能では使用しない）
+- **Nostrへの直接のzapを許可**: チェックボックス形式（デフォルト: true）
+  - true: NostrイベントQRコードとLightning InvoiceQRコード両方を表示、緩い検証
+  - false: Lightning InvoiceQRコードのみ表示、厳密なzap検証を実行
 
 ### 機能要件
 
@@ -40,6 +43,7 @@ Nostr Fortune Slipは、NostrプロトコルとLightning Networkを統合した�
 - 設定画面からメイン画面への戻る機能
 - セキュリティ警告の表示
 - データ削除機能（確認ダイアログ付き）
+- Zap検証設定の保存・読み込み（allowDirectNostrZap）
 
 #### メイン画面機能
 - **QRコード生成機能**: ボタンを押すとQRコードを表示
@@ -109,8 +113,8 @@ src/
    - インボイス生成（1 sat = 1000 millisatoshi）
 
 4. **デュアルQRコード生成・表示**
-   - **Lightning Invoice QRコード**: `lightning:` + bolt11インボイス形式
-   - **Nostr Event Link QRコード**: `nostr:nevent1...` 形式
+   - **Lightning Invoice QRコード**: `lightning:` + bolt11インボイス形式（常に表示）
+   - **Nostr Event Link QRコード**: `nostr:nevent1...` 形式（allowDirectNostrZap設定に基づき表示/非表示）
    - qrcode ライブラリ（v1.5.4）を使用した2つのQRコード並列表示
    - 各QRコードに明確なラベル付け
 
@@ -134,6 +138,9 @@ src/
   - ラッキーナンバー範囲: 1-20
 - **Nostrタグ**: `p`タグ（メンション）+ `e`タグ（リプライ）
 - **QRコード設定**: 256px幅、PNG形式、マージン1px
+- **Zap検証**: allowDirectNostrZap設定により検証レベルを調整
+  - true（デフォルト）: 緩い検証、直接zapを許可
+  - false: 厳密な検証、descriptionとzap requestの一致を要求
 - **エラー処理**: ユーザーへのエラーメッセージ表示
 
 #### QRコード生成機能詳細
@@ -163,6 +170,8 @@ const neventQrCode = await generateGenericQRCode(neventUri);
 10. **Nostr Event Link QRコード**を生成・表示
 11. **2つのQRコードを縦に並べて同時表示**
 12. **Zap Receipt監視開始**（kind 9735イベント検知）
+    - allowDirectNostrZap設定に基づきzap検証の厳密さを調整
+    - false時: descriptionタグ内のzap request IDを厳密に検証
 13. **Zap検知時の処理**:
     - Zapした人の公開鍵を抽出
     - 1-20の範囲でラッキーナンバー生成
