@@ -36,7 +36,7 @@ export function extractZapperPubkey(zapReceipt: NostrEvent): string | null {
 export function createFortuneMessage(zapperPubkey: string, luckyNumber: number): string {
   const npub = nip19.npubEncode(zapperPubkey);
   const mention = `nostr:${npub}`;
-  return `おみくじがひかれました🎉\n\nラッキーナンバーは ${luckyNumber} です✨\n\n素敵な一日をお過ごしください! ${mention} `;
+  return `おみくじのラッキーナンバーは ${luckyNumber} です✨\n\n素敵な一日をお過ごしください! ${mention} `;
 }
 
 /**

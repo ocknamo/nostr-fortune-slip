@@ -144,7 +144,7 @@ describe('createMentionEvent', () => {
       ],
       content: 'test content',
       sig: 'signature',
-    } as NostrEvent);
+    } as any);
   });
 
   it('should create mention event with correct structure', () => {
