@@ -11,9 +11,11 @@ Nostr Fortune Slipは、NostrプロトコルとLightning Networkを統合した�
 - **Nostr Event QRコード**: 作成されたkind1イベントへの`nostr:nevent1`リンクをQRコード化
 - **Nostr統合**: kind 1イベントの作成・署名・送信、Zapリクエスト（kind 9734）の生成
 - **Zap検知機能**: リアルタイムでZap Receiptを検知し、おみくじ結果を表示
-- **フォーチュンメッセージ**: Zap検知後に送信者へメンション付きでラッキーナンバー（1-100）を送信
-- **設定管理**: ライトニングアドレス、Nostr秘密鍵の安全な管理
+- **Coinos API検証**: Zapレシート受信後にCoinos APIで入金を追加検証（preimage照合）
+- **フォーチュンメッセージ**: Zap検知後に送信者へメンション付きでラッキーナンバー（1-20）を送信
+- **設定管理**: ライトニングアドレス、Nostr秘密鍵、Coinos Read-Only API Tokenの安全な管理
 - **Zap検証設定**: 直接Nostr zapの許可/不許可を設定可能（セキュリティレベルの調整）
+- **エラー表示**: Coinos API検証エラーを画面に表示して詳細情報を提供
 - **レスポンシブUI**: モバイルファーストなTailwind CSSベースのデザイン
 - **セキュリティ**: LocalStorage使用時の適切な警告表示
 
@@ -151,8 +153,10 @@ npm run fix
 2. 以下の情報を入力：
    - **ライトニングアドレス**: `user@domain.com` 形式
    - **Nostr秘密鍵**: `nsec1...` 形式
-   - **Coinos ID**: Coinosアカウント（現在未使用）
-   - **Coinosパスワード**: Coinosパスワード（現在未使用）
+   - **Coinos Read-Only API Token（オプション）**: Coinos支払い検証用のRead-Only APIトークン
+     - ⚠️ **重要**: Read-Only（読み取り専用）トークンのみ使用してください
+     - 書き込み権限のあるトークンは絶対に使用しないでください
+     - 空欄の場合はCoinos検証をスキップします
    - **Nostrへの直接のzapを許可**: 
      - 有効（デフォルト）: NostrイベントQRコードとLightning InvoiceQRコード両方を表示
      - 無効: Lightning InvoiceQRコードのみ表示し、より厳密なzap検証を実行

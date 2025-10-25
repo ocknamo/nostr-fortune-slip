@@ -1,5 +1,10 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { getZapInvoiceFromEndpoint, validateZapReceipt, subscribeToZapReceipts } from './zap.js';
+import {
+  getZapInvoiceFromEndpoint,
+  validateZapReceipt,
+  validateZapReceiptWithCoinos,
+  subscribeToZapReceipts,
+} from './zap.js';
 import type { NostrEvent } from './types.js';
 import { SimplePool } from 'nostr-tools';
 
@@ -11,6 +16,14 @@ vi.stubGlobal('fetch', mockFetch);
 vi.mock('nostr-tools', () => ({
   SimplePool: vi.fn(),
 }));
+
+// Mock coinos module
+vi.mock('../coinos.js', () => ({
+  verifyCoinosPayment: vi.fn(),
+}));
+
+import { verifyCoinosPayment } from '../coinos.js';
+const mockVerifyCoinosPayment = vi.mocked(verifyCoinosPayment);
 
 describe('getZapInvoiceFromEndpoint', () => {
   beforeEach(() => {
@@ -251,6 +264,152 @@ describe('validateZapReceipt', () => {
   });
 });
 
+describe('validateZapReceiptWithCoinos', () => {
+  const createMockZapRequest = (id: string = 'zap-request-id'): NostrEvent => ({
+    id,
+    pubkey: 'zap-pubkey',
+    created_at: Math.floor(Date.now() / 1000),
+    kind: 9734,
+    tags: [],
+    content: '',
+    sig: 'zap-sig',
+  });
+
+  const createMockZapReceipt = (
+    targetEventId: string = 'target-event-id',
+    zapRequestId: string = 'zap-request-id',
+    preimage: string = 'test-preimage',
+  ): NostrEvent => ({
+    id: 'zap-receipt-id',
+    pubkey: 'lightning-service-pubkey',
+    created_at: Math.floor(Date.now() / 1000),
+    kind: 9735,
+    tags: [
+      ['bolt11', 'lnbc1000n1...'],
+      ['description', JSON.stringify({ id: zapRequestId })],
+      ['e', targetEventId],
+      ['preimage', preimage],
+    ],
+    content: '',
+    sig: 'receipt-sig',
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should pass validation when both Nostr and Coinos verification succeed', async () => {
+    const targetEventId = 'target-event-id';
+    const zapRequest = createMockZapRequest();
+    const zapReceipt = createMockZapReceipt(targetEventId, zapRequest.id);
+
+    mockVerifyCoinosPayment.mockResolvedValueOnce({
+      verified: true,
+      matchedPayment: {
+        id: 'test-payment-id',
+        iid: 'test-iid',
+        hash: 'test-hash',
+        amount: 1000,
+        uid: 'test-uid',
+        rate: 17000000,
+        currency: 'JPY',
+        memo: '{"id":"test-zap-request-id"}',
+        payment_hash: 'test-payment-hash',
+        ref: 'test-preimage',
+        tip: 0,
+        type: 'lightning',
+        confirmed: true,
+        created: Date.now(),
+      },
+    });
+
+    const result = await validateZapReceiptWithCoinos(zapReceipt, targetEventId, zapRequest, true, 'test-api-token');
+
+    expect(result.valid).toBe(true);
+    expect(result.coinosVerified).toBe(true);
+    expect(mockVerifyCoinosPayment).toHaveBeenCalledWith(zapReceipt, 'test-api-token');
+  });
+
+  it('should pass validation without Coinos verification when no API token provided', async () => {
+    const targetEventId = 'target-event-id';
+    const zapRequest = createMockZapRequest();
+    const zapReceipt = createMockZapReceipt(targetEventId, zapRequest.id);
+
+    const result = await validateZapReceiptWithCoinos(
+      zapReceipt,
+      targetEventId,
+      zapRequest,
+      true,
+      undefined, // No API token
+    );
+
+    expect(result.valid).toBe(true);
+    expect(result.coinosVerified).toBe(false);
+    expect(mockVerifyCoinosPayment).not.toHaveBeenCalled();
+  });
+
+  it('should pass validation without Coinos verification when empty API token provided', async () => {
+    const targetEventId = 'target-event-id';
+    const zapRequest = createMockZapRequest();
+    const zapReceipt = createMockZapReceipt(targetEventId, zapRequest.id);
+
+    const result = await validateZapReceiptWithCoinos(
+      zapReceipt,
+      targetEventId,
+      zapRequest,
+      true,
+      '   ', // Empty/whitespace API token
+    );
+
+    expect(result.valid).toBe(true);
+    expect(result.coinosVerified).toBe(false);
+    expect(mockVerifyCoinosPayment).not.toHaveBeenCalled();
+  });
+
+  it('should fail validation when basic Nostr validation fails', async () => {
+    const targetEventId = 'target-event-id';
+    const zapRequest = createMockZapRequest();
+    const zapReceipt = { ...createMockZapReceipt(targetEventId, zapRequest.id), kind: 1 }; // Invalid kind
+
+    const result = await validateZapReceiptWithCoinos(zapReceipt, targetEventId, zapRequest, true, 'test-api-token');
+
+    expect(result.valid).toBe(false);
+    expect(result.error).toBe('Basic zap receipt validation failed');
+    expect(mockVerifyCoinosPayment).not.toHaveBeenCalled();
+  });
+
+  it('should fail validation when Coinos verification fails', async () => {
+    const targetEventId = 'target-event-id';
+    const zapRequest = createMockZapRequest();
+    const zapReceipt = createMockZapReceipt(targetEventId, zapRequest.id);
+
+    mockVerifyCoinosPayment.mockResolvedValueOnce({
+      verified: false,
+      error: 'No matching payment found in Coinos API',
+    });
+
+    const result = await validateZapReceiptWithCoinos(zapReceipt, targetEventId, zapRequest, true, 'test-api-token');
+
+    expect(result.valid).toBe(false);
+    expect(result.coinosVerified).toBe(false);
+    expect(result.error).toBe('Coinos verification failed: No matching payment found in Coinos API');
+    expect(mockVerifyCoinosPayment).toHaveBeenCalledWith(zapReceipt, 'test-api-token');
+  });
+
+  it('should handle unexpected errors during verification', async () => {
+    const targetEventId = 'target-event-id';
+    const zapRequest = createMockZapRequest();
+    const zapReceipt = createMockZapReceipt(targetEventId, zapRequest.id);
+
+    mockVerifyCoinosPayment.mockRejectedValueOnce(new Error('Network error'));
+
+    const result = await validateZapReceiptWithCoinos(zapReceipt, targetEventId, zapRequest, true, 'test-api-token');
+
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('Verification error: Network error');
+  });
+});
+
 describe('subscribeToZapReceipts', () => {
   let mockPoolInstance: any;
 
@@ -373,7 +532,7 @@ describe('subscribeToZapReceipts', () => {
     consoleSpy.mockRestore();
   });
 
-  it('should pass allowDirectNostrZap parameter to validateZapReceipt', () => {
+  it('should pass allowDirectNostrZap parameter to validateZapReceipt', async () => {
     const targetEventId = 'target-event-id';
     const zapRequest: NostrEvent = {
       id: 'zap-request-id',
@@ -416,12 +575,15 @@ describe('subscribeToZapReceipts', () => {
 
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    // oneventを呼び出し
-    oneventHandler(zapReceipt);
+    // oneventを呼び出し（非同期処理を待つ）
+    await oneventHandler(zapReceipt);
 
     // allowDirectNostrZap = false の場合、description検証が実行され、onZapReceivedは呼ばれないはず
     expect(onZapReceived).not.toHaveBeenCalled();
-    expect(consoleSpy).toHaveBeenCalledWith(`[Zap Monitor] Invalid zap receipt for event: ${targetEventId}`);
+    expect(consoleSpy).toHaveBeenCalledWith(
+      `[Zap Monitor] Invalid zap receipt for event: ${targetEventId}`,
+      expect.any(String),
+    );
 
     consoleSpy.mockRestore();
   });

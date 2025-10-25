@@ -36,6 +36,7 @@ let currentTargetEventId: string | null = null;
 // 設定データ
 let lightningAddress = '';
 let nostrPrivateKey = '';
+let coinosApiToken = '';
 let allowDirectNostrZap = true; // デフォルトtrue
 
 // 設定データを読み込み
@@ -43,6 +44,7 @@ onMount(() => {
   if (typeof window !== 'undefined') {
     lightningAddress = localStorage.getItem('lightningAddress') || '';
     nostrPrivateKey = localStorage.getItem('nostrPrivateKey') || '';
+    coinosApiToken = localStorage.getItem('coinosApiToken') || '';
     const storedAllowDirectNostrZap = localStorage.getItem('allowDirectNostrZap');
     // デフォルトはtrue、明示的にfalseの場合のみfalse
     allowDirectNostrZap = storedAllowDirectNostrZap === null ? true : storedAllowDirectNostrZap === 'true';
@@ -114,6 +116,21 @@ async function onZapDetected(zapReceipt: NostrEvent) {
 
     successMessage = 'Zapを受信しました！';
   }
+}
+
+function onZapError(error: string) {
+  console.error('[Fortune Slip] Zap verification error:', error);
+  
+  // Zapエラーが発生した場合
+  errorMessage = `Zap検証エラー: ${error}`;
+  
+  // 待機状態を終了
+  isWaitingForZap = false;
+  qrCodeDataUrl = '';
+  neventQrCodeDataUrl = '';
+  
+  // サブスクリプション停止
+  stopZapMonitoring();
 }
 
 function resetFortuneSlip() {
@@ -189,6 +206,8 @@ async function generateQRCode() {
       onZapDetected,
       300000, // 5分タイムアウト
       allowDirectNostrZap, // 設定を渡す
+      coinosApiToken, // Coinos API Token（オプション）
+      onZapError, // エラーコールバック
     );
 
     isWaitingForZap = true;

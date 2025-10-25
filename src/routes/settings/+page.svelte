@@ -5,9 +5,8 @@ import { onMount } from 'svelte';
 // フォームデータ
 let lightningAddress = '';
 let nostrPrivateKey = '';
-let coinosId = '';
-let coinosPassword = '';
-let showPassword = false;
+let coinosApiToken = '';
+let showApiToken = false;
 let allowDirectNostrZap = true; // デフォルトtrue
 
 // UI状態
@@ -20,8 +19,7 @@ onMount(() => {
   if (typeof window !== 'undefined') {
     lightningAddress = localStorage.getItem('lightningAddress') || '';
     nostrPrivateKey = localStorage.getItem('nostrPrivateKey') || '';
-    coinosId = localStorage.getItem('coinosId') || '';
-    coinosPassword = localStorage.getItem('coinosPassword') || '';
+    coinosApiToken = localStorage.getItem('coinosApiToken') || '';
     const storedAllowDirectNostrZap = localStorage.getItem('allowDirectNostrZap');
     // デフォルトはtrue、明示的にfalseの場合のみfalse
     allowDirectNostrZap = storedAllowDirectNostrZap === null ? true : storedAllowDirectNostrZap === 'true';
@@ -46,15 +44,7 @@ function validateForm(): boolean {
     errors.nostrPrivateKey = 'nsec1で始まる有効な秘密鍵を入力してください';
   }
 
-  // coinos-idのバリデーション
-  if (!coinosId.trim()) {
-    errors.coinosId = 'Coinos IDは必須です';
-  }
-
-  // coinos-passwordのバリデーション
-  if (!coinosPassword.trim()) {
-    errors.coinosPassword = 'Coinosパスワードは必須です';
-  }
+  // Coinos API Token（オプショナル）はバリデーションなし
 
   return Object.keys(errors).length === 0;
 }
@@ -64,8 +54,7 @@ function handleSave() {
   if (validateForm()) {
     localStorage.setItem('lightningAddress', lightningAddress);
     localStorage.setItem('nostrPrivateKey', nostrPrivateKey);
-    localStorage.setItem('coinosId', coinosId);
-    localStorage.setItem('coinosPassword', coinosPassword);
+    localStorage.setItem('coinosApiToken', coinosApiToken);
     localStorage.setItem('allowDirectNostrZap', allowDirectNostrZap.toString());
 
     showSuccessMessage = true;
@@ -80,9 +69,9 @@ function goBack() {
   goto('/');
 }
 
-// パスワード表示切り替え
-function togglePasswordVisibility() {
-  showPassword = !showPassword;
+// API Token表示切り替え
+function toggleApiTokenVisibility() {
+  showApiToken = !showApiToken;
 }
 
 // データ削除処理
@@ -90,15 +79,16 @@ function handleClearData() {
   if (confirm('保存されているすべての設定データを削除しますか？この操作は取り消せません。')) {
     localStorage.removeItem('lightningAddress');
     localStorage.removeItem('nostrPrivateKey');
+    localStorage.removeItem('coinosApiToken');
+    localStorage.removeItem('allowDirectNostrZap');
+    // 旧データも削除（後方互換性のため）
     localStorage.removeItem('coinosId');
     localStorage.removeItem('coinosPassword');
-    localStorage.removeItem('allowDirectNostrZap');
 
     // フォームをクリア
     lightningAddress = '';
     nostrPrivateKey = '';
-    coinosId = '';
-    coinosPassword = '';
+    coinosApiToken = '';
     allowDirectNostrZap = true; // デフォルト値にリセット
 
     showDeleteMessage = true;
@@ -194,44 +184,46 @@ function handleClearData() {
           {/if}
         </div>
 
-        <!-- Coinos ID -->
+        <!-- Coinos API Token（オプショナル） -->
         <div>
-          <label for="coinos-id" class="block text-sm font-medium text-gray-700 mb-2">
-            Coinos ID
+          <label for="coinos-api-token" class="block text-sm font-medium text-gray-700 mb-2">
+            Coinos Read-Only API Token（オプショナル）
           </label>
-          <input
-            id="coinos-id"
-            type="text"
-            bind:value={coinosId}
-            placeholder="your-coinos-id"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            class:border-red-500={errors.coinosId}
-          />
-          {#if errors.coinosId}
-            <p class="mt-1 text-sm text-red-600">{errors.coinosId}</p>
-          {/if}
-        </div>
-
-        <!-- Coinos パスワード -->
-        <div>
-          <label for="coinos-password" class="block text-sm font-medium text-gray-700 mb-2">
-            Coinosパスワード
-          </label>
+          <div class="mb-3 p-3 bg-red-50 border border-red-200 rounded-md">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div class="ml-3">
+                <h3 class="text-sm font-medium text-red-800">重要な注意事項</h3>
+                <div class="mt-2 text-sm text-red-700">
+                  <ul class="list-disc pl-5 space-y-1">
+                    <li><strong>Read-Only（読み取り専用）トークンのみを入力してください</strong></li>
+                    <li>書き込み権限のあるトークンは絶対に使用しないでください</li>
+                    <li>トークンは安全に管理し、他人と共有しないでください</li>
+                    <li>このフィールドが空欄の場合支払いの厳密な検証がスキップされます</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
           <div class="relative">
             <input
-              id="coinos-password"
-              type={showPassword ? 'text' : 'password'}
-              bind:value={coinosPassword}
-              placeholder="パスワードを入力してください"
+              id="coinos-api-token"
+              type={showApiToken ? 'text' : 'password'}
+              bind:value={coinosApiToken}
+              placeholder="Read-Only API Tokenを入力（オプション）"
               class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              class:border-red-500={errors.coinosPassword}
+              class:border-red-500={errors.coinosApiToken}
             />
             <button
               type="button"
-              on:click={togglePasswordVisibility}
+              on:click={toggleApiTokenVisibility}
               class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
             >
-              {#if showPassword}
+              {#if showApiToken}
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
                 </svg>
@@ -243,8 +235,8 @@ function handleClearData() {
               {/if}
             </button>
           </div>
-          {#if errors.coinosPassword}
-            <p class="mt-1 text-sm text-red-600">{errors.coinosPassword}</p>
+          {#if errors.coinosApiToken}
+            <p class="mt-1 text-sm text-red-600">{errors.coinosApiToken}</p>
           {/if}
         </div>
 

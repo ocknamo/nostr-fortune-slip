@@ -1,0 +1,34 @@
+{
+  "content": "",
+  "created_at": 1761410886,
+  "id": "96281c5f3f9defa2db55d4d274f6f9d711101d0aa0f1e941c08adc24f5f18740",
+  "kind": 9735,
+  "pubkey": "72bdbc57bdd6dfc4e62685051de8041d148c3c68fe42bf301f71aa6cf53e52fb",
+  "sig": "75252e14bd84b8d5d9a0cf7607a989e273d7d948238e157ea3b895cabad7d93398ecc23d0173b5a1cb5e844de796e08292465f973f13eeb0c7ad03161e08413f",
+  "tags": [
+      [
+          "p",
+          "2b458550f08fcf75d2bec596c0411c1f4ee93f3820deae951a120c028e30c480"
+      ],
+      [
+          "e",
+          "b5cddd13f7f9f1bc4bf48f7ad4fa048b40768748e32235659d67884b7f42f298"
+      ],
+      [
+          "P",
+          "26bb2ebed6c552d670c804b0d655267b3c662b21e026d6e48ac93a6070530958"
+      ],
+      [
+          "bolt11",
+          "lnbc10n1p50eleusp5qgxrvdx5le4hxvej6kzz9aag25p2vu297xh0leg0qahzc05jmhmspp5q93wu552v07qd2utsklkk9m6s6qg3jwrrpapzlwdtpegnc6rd9dqhp5yep9yev4vdzna5hpzejjcrflz2ucdu3a4jwkjhms45ptvz2d5dmqxq9z0rgqcqpnrzjqdqne4nrkxmz96ktnngat4nzx7sv0kf5uqmgfvqvvars7pac7fn9wr8fjvqq3csqqqqqqqqqqqqqycsqvs9qxpqysgqlfdkthah28n08ryltasmus7r04kje4kvpll69rqc0ngyqqn969szaf8h5dxt7e80fmr7vnrwr75wywl40y4u2pwq4h8lpeg8p44qqhcq0e9r6j"
+      ],
+      [
+          "description",
+          "{\"id\":\"e73567936eb8ee87b897c62daff7b6e5d6cfb799b117257d3a20fcdc5dd240bc\",\"pubkey\":\"26bb2ebed6c552d670c804b0d655267b3c662b21e026d6e48ac93a6070530958\",\"created_at\":1761410876,\"kind\":9734,\"tags\":[[\"e\",\"b5cddd13f7f9f1bc4bf48f7ad4fa048b40768748e32235659d67884b7f42f298\"],[\"p\",\"2b458550f08fcf75d2bec596c0411c1f4ee93f3820deae951a120c028e30c480\"],[\"relays\",\"wss://yabu.me/\",\"wss://nos.lol/\",\"wss://r.kojira.io/\",\"wss://relay.rodbishop.nz/\",\"wss://relay.rodbishop.nz/inbox/\",\"wss://relay-dev.barine.co/\"],[\"alt\",\"Zap request\"]],\"content\":\"\",\"sig\":\"6b6661724ddf4f682065bf2da3eebff4cd20ae7799db98efe85fa30704040d4ef802a8a26f55afb8729df81e7810dc98d2236fd34f2d37b84b5abd1f98712dd5\"}"
+      ],
+      [
+          "preimage",
+          "b906162e37c62c8163c45e21fa5d35cafcf6657ae9da0db4ca07c69dc7eeb61f"
+      ]
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "payments": [
+    {
+      "id": "b18072ac-6f25-4ab2-a031-81719417b29d",
+      "iid": "53bd915a-d8d8-46eb-8f5b-0e9b1dc43d7e",
+      "hash": "lnbc10n1p50eleusp5qgxrvdx5le4hxvej6kzz9aag25p2vu297xh0leg0qahzc05jmhmspp5q93wu552v07qd2utsklkk9m6s6qg3jwrrpapzlwdtpegnc6rd9dqhp5yep9yev4vdzna5hpzejjcrflz2ucdu3a4jwkjhms45ptvz2d5dmqxq9z0rgqcqpnrzjqdqne4nrkxmz96ktnngat4nzx7sv0kf5uqmgfvqvvars7pac7fn9wr8fjvqq3csqqqqqqqqqqqqqycsqvs9qxpqysgqlfdkthah28n08ryltasmus7r04kje4kvpll69rqc0ngyqqn969szaf8h5dxt7e80fmr7vnrwr75wywl40y4u2pwq4h8lpeg8p44qqhcq0e9r6j",
+      "amount": 1,
+      "uid": "2ffdfba6-8839-4833-b6b1-4bceb4e609c3",
+      "rate": 17007391.127480797,
+      "currency": "JPY",
+      "memo": "{\"id\":\"e73567936eb8ee87b897c62daff7b6e5d6cfb799b117257d3a20fcdc5dd240bc\",\"pubkey\":\"26bb2ebed6c552d670c804b0d655267b3c662b21e026d6e48ac93a6070530958\",\"created_at\":1761410876,\"kind\":9734,\"tags\":[[\"e\",\"b5cddd13f7f9f1bc4bf48f7ad4fa048b40768748e32235659d67884b7f42f298\"],[\"p\",\"2b458550f08fcf75d2bec596c0411c1f4ee93f3820deae951a120c028e30c480\"],[\"relays\",\"wss://yabu.me/\",\"wss://nos.lol/\",\"wss://r.kojira.io/\",\"wss://relay.rodbishop.nz/\",\"wss://relay.rodbishop.nz/inbox/\",\"wss://relay-dev.barine.co/\"],[\"alt\",\"Zap request\"]],\"content\":\"\",\"sig\":\"6b6661724ddf4f682065bf2da3eebff4cd20ae7799db98efe85fa30704040d4ef802a8a26f55afb8729df81e7810dc98d2236fd34f2d37b84b5abd1f98712dd5\"}",
+      "payment_hash": "0162ee528a63fc06ab8b85bf6b177a868088c9c3187a117dcd587289e343695a",
+      "ref": "b906162e37c62c8163c45e21fa5d35cafcf6657ae9da0db4ca07c69dc7eeb61f",
+      "tip": 0,
+      "type": "lightning",
+      "confirmed": true,
+      "created": 1761410886967
+    }
+  ],
+  "count": 1,
+  "incoming": {
+    "JPY": {
+      "tips": 0,
+      "fiatTips": "0.00",
+      "sats": 1,
+      "fiat": "0.17"
+    }
+  },
+  "outgoing": {}
+}
