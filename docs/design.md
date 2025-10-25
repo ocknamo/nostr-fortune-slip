@@ -60,11 +60,9 @@ src/
 │   ├── nostr/                  # Nostr関連機能（モジュール化）
 │   │   ├── index.ts            # 統合エクスポート
 │   │   ├── types.ts            # 型定義（NostrEvent, MetadataContent等）
-│   │   ├── metadata.ts         # Metadataクラス
 │   │   ├── events.ts           # イベント作成機能
 │   │   ├── zap.ts              # Zap関連機能（検知・バリデーション）
 │   │   ├── utils.ts            # ユーティリティ機能
-│   │   ├── metadata.spec.ts    # Metadataクラステスト（4テスト）
 │   │   ├── events.spec.ts      # イベント作成テスト（8テスト）
 │   │   ├── zap.spec.ts         # Zap機能テスト（12テスト）
 │   │   └── utils.spec.ts       # ユーティリティテスト（3テスト）
@@ -79,47 +77,6 @@ src/
 ```
 
 ## アーキテクチャ設計
-
-### モジュール化の方針
-
-2024年10月25日にnostr.tsファイルを機能別にモジュール化し、以下の利点を実現：
-
-1. **単一責任原則**: 各モジュールが特定の機能のみを担当
-2. **テスト性向上**: 機能別に独立したテストが可能
-3. **保守性向上**: 変更時の影響範囲を限定
-4. **可読性向上**: 小さなファイルで理解しやすい
-
-### モジュール詳細
-
-#### `nostr/types.ts`
-- インターfaces定義: `NostrEvent`, `MetadataContent`, `ZapReceiptSubscription`
-- 他のモジュールで使用される型の一元管理
-
-#### `nostr/metadata.ts`
-- `Metadata`クラス: Nostrユーザーのメタデータ管理
-- Zap対応確認: `canZap`プロパティ
-- Zapエンドポイント取得: `zapUrl()`メソッド
-
-#### `nostr/events.ts`
-- イベント作成機能群
-- `decodeNsec()`: nsec形式の秘密鍵デコード
-- `createTextEvent()`: kind 1イベント作成
-- `createZapRequest()`: kind 9734（Zapリクエスト）作成
-- `createMetadataEvent()`: kind 0イベント作成
-
-#### `nostr/zap.ts`
-- Zap関連の高度な機能
-- `getZapInvoiceFromEndpoint()`: インボイス取得
-- `validateZapReceipt()`: Zap Receiptの妥当性検証
-- `subscribeToZapReceipts()`: リアルタイムZap検知
-
-#### `nostr/utils.ts`
-- 汎用ユーティリティ
-- `publishEvent()`: リレーへのイベント送信
-
-#### `nostr/index.ts`
-- 統合エクスポートファイル
-- 後方互換性を保持（既存のimportが動作）
 
 ### テスト戦略
 
@@ -153,7 +110,7 @@ src/
 
 #### 技術仕様
 
-- **Nostrリレー**: `['wss://nos.lol/']`
+- **Nostrリレー**: `['wss://nos.lol/']` etc.
 - **イベント内容**: `"test"`（kind 1）
 - **支払い金額**: 1 sat（1000 millisatoshi）
 - **QRコード形式**: `lightning:lnbc...`
