@@ -2,7 +2,7 @@
 
 ## プロジェクト概要
 
-Nostr Fortune Slipは、ライトニングネットワークとCoinosサービスを利用したアプリケーションです。このドキュメントでは、設定画面とメイン画面の設計・実装について説明します。
+Nostr Fortune Slipは、NostrプロトコルとLightning Networkを統合したおみくじアプリケーションです。ユーザーが1 satを支払うと、1-20のラッキーナンバーが表示される仕組みです。このドキュメントでは、設定画面、メイン画面、およびモジュール化されたコード構造の設計・実装について説明します。
 
 ## 技術スタック
 
@@ -55,13 +55,78 @@ Nostr Fortune Slipは、ライトニングネットワークとCoinosサービ�
 
 ```
 src/
+├── lib/                        # コアライブラリ
+│   ├── lightning.ts            # Lightning Network関連
+│   ├── nostr/                  # Nostr関連機能（モジュール化）
+│   │   ├── index.ts            # 統合エクスポート
+│   │   ├── types.ts            # 型定義（NostrEvent, MetadataContent等）
+│   │   ├── metadata.ts         # Metadataクラス
+│   │   ├── events.ts           # イベント作成機能
+│   │   ├── zap.ts              # Zap関連機能（検知・バリデーション）
+│   │   ├── utils.ts            # ユーティリティ機能
+│   │   ├── metadata.spec.ts    # Metadataクラステスト（4テスト）
+│   │   ├── events.spec.ts      # イベント作成テスト（8テスト）
+│   │   ├── zap.spec.ts         # Zap機能テスト（12テスト）
+│   │   └── utils.spec.ts       # ユーティリティテスト（3テスト）
+│   ├── qrcode.ts              # QRコード生成
+│   └── *.spec.ts              # その他のテスト
 ├── routes/
-│   ├── +layout.svelte          # 共通レイアウト
-│   ├── +page.svelte            # メイン画面
+│   ├── +layout.svelte         # 共通レイアウト
+│   ├── +page.svelte           # メイン画面（おみくじ機能）
 │   └── settings/
-│       └── +page.svelte        # 設定画面
-└── app.css                     # Tailwind CSS設定
+│       └── +page.svelte       # 設定画面
+└── app.css                    # Tailwind CSS設定
 ```
+
+## アーキテクチャ設計
+
+### モジュール化の方針
+
+2024年10月25日にnostr.tsファイルを機能別にモジュール化し、以下の利点を実現：
+
+1. **単一責任原則**: 各モジュールが特定の機能のみを担当
+2. **テスト性向上**: 機能別に独立したテストが可能
+3. **保守性向上**: 変更時の影響範囲を限定
+4. **可読性向上**: 小さなファイルで理解しやすい
+
+### モジュール詳細
+
+#### `nostr/types.ts`
+- インターfaces定義: `NostrEvent`, `MetadataContent`, `ZapReceiptSubscription`
+- 他のモジュールで使用される型の一元管理
+
+#### `nostr/metadata.ts`
+- `Metadata`クラス: Nostrユーザーのメタデータ管理
+- Zap対応確認: `canZap`プロパティ
+- Zapエンドポイント取得: `zapUrl()`メソッド
+
+#### `nostr/events.ts`
+- イベント作成機能群
+- `decodeNsec()`: nsec形式の秘密鍵デコード
+- `createTextEvent()`: kind 1イベント作成
+- `createZapRequest()`: kind 9734（Zapリクエスト）作成
+- `createMetadataEvent()`: kind 0イベント作成
+
+#### `nostr/zap.ts`
+- Zap関連の高度な機能
+- `getZapInvoiceFromEndpoint()`: インボイス取得
+- `validateZapReceipt()`: Zap Receiptの妥当性検証
+- `subscribeToZapReceipts()`: リアルタイムZap検知
+
+#### `nostr/utils.ts`
+- 汎用ユーティリティ
+- `publishEvent()`: リレーへのイベント送信
+
+#### `nostr/index.ts`
+- 統合エクスポートファイル
+- 後方互換性を保持（既存のimportが動作）
+
+### テスト戦略
+
+- **機能別テスト**: 各モジュールに対応するテストファイル
+- **重複排除**: 元の巨大テストファイルを削除
+- **カバレッジ向上**: 合計27テスト（削除前61テスト→削除後40テスト）
+- **成功率100%**: 全テストがパス
 
 ### メイン画面 (`src/routes/+page.svelte`)
 
