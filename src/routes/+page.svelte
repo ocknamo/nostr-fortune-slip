@@ -9,15 +9,17 @@ import {
   createMetadataEvent,
   getZapInvoiceFromEndpoint,
   subscribeToZapReceipts,
+  createNeventUri,
   type ZapReceiptSubscription,
   type NostrEvent,
 } from '$lib/nostr';
-import { generateLightningQRCode } from '$lib/qrcode';
+import { generateLightningQRCode, generateQRCode as generateGenericQRCode, generateNostrQRCode } from '$lib/qrcode';
 import { nip57 } from 'nostr-tools';
 
 // UI状態
 let isLoading = false;
 let qrCodeDataUrl = '';
+let neventQrCodeDataUrl = '';
 let errorMessage = '';
 let successMessage = '';
 let isWaitingForZap = false;
@@ -72,6 +74,7 @@ function onZapDetected(zapReceipt: NostrEvent) {
 
   // QRコードを非表示
   qrCodeDataUrl = '';
+  neventQrCodeDataUrl = '';
 
   // ランダム数字を生成（1-20）
   randomNumber = Math.floor(Math.random() * 20) + 1;
@@ -88,6 +91,7 @@ function onZapDetected(zapReceipt: NostrEvent) {
 
 function resetFortuneSlip() {
   qrCodeDataUrl = '';
+  neventQrCodeDataUrl = '';
   zapDetected = false;
   randomNumber = null;
   isWaitingForZap = false;
@@ -143,7 +147,12 @@ async function generateQRCode() {
     const qrCode = await generateLightningQRCode(invoice.pr);
     qrCodeDataUrl = qrCode;
 
-    // 8. Zap検知を開始
+    // 8. nevent URIとQRコードを生成
+    const neventUri = createNeventUri(textEvent);
+    const neventQrCode = await generateNostrQRCode(neventUri);
+    neventQrCodeDataUrl = neventQrCode;
+
+    // 9. Zap検知を開始
     currentZapRequest = zapRequest;
     currentTargetEventId = textEvent.id;
 
@@ -210,10 +219,28 @@ async function generateQRCode() {
           </div>
         {:else if qrCodeDataUrl}
           <div class="mb-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Lightning Invoice QR Code</h3>
-            <div class="flex justify-center mb-4">
-              <img src={qrCodeDataUrl} alt="Lightning Invoice QR Code" class="max-w-full h-auto rounded-lg shadow-sm" />
+            <h3 class="text-lg font-medium text-gray-900 mb-4">QR Codes</h3>
+
+            <!-- Nostr Event QR Code -->
+            {#if neventQrCodeDataUrl}
+              <div class="mb-4">
+                <h4 class="text-sm font-medium text-gray-700 mb-2 text-center">Zap to Nostr Event</h4>
+                <div class="flex justify-center mb-2">
+                  <img src={neventQrCodeDataUrl} alt="Nostr Event QR Code" class="max-w-full h-auto rounded-lg shadow-sm" style="max-width: 200px;" />
+                </div>
+              </div>
+              <p class="mb-8">OR</p>
+            {/if}
+
+            <!-- Lightning Invoice QR Code -->
+            <div class="mb-4">
+              <h4 class="text-sm font-medium text-gray-700 mb-2 text-center">Lightning Invoice (1 sat)</h4>
+              <div class="flex justify-center mb-2">
+                <img src={qrCodeDataUrl} alt="Lightning Invoice QR Code" class="max-w-full h-auto rounded-lg shadow-sm" style="max-width: 200px;" />
+              </div>
             </div>
+            
+
             
             <!-- Zap待機中のステータス -->
             {#if isWaitingForZap}

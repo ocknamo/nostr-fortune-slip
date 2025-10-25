@@ -95,7 +95,7 @@ src/
 
 2. **Nostr機能**
    - WebSocket接続によるリレーサーバー通信 (`wss://nos.lol/`)
-   - kind 1イベント（テストメッセージ）の作成・送信
+   - kind 1イベント（Fortune Slip Request）の作成・送信
    - nsec形式の秘密鍵のデコード・署名処理
 
 3. **Zapリクエスト処理**
@@ -103,18 +103,41 @@ src/
    - ライトニングアドレスから LNURL-pay エンドポイントの取得
    - インボイス生成（1 sat = 1000 millisatoshi）
 
-4. **QRコード生成・表示**
-   - qrcode ライブラリ（v1.5.4）を使用
-   - `lightning:` + bolt11インボイス形式
-   - 生成されたQRコードの画面表示
+4. **デュアルQRコード生成・表示**
+   - **Lightning Invoice QRコード**: `lightning:` + bolt11インボイス形式
+   - **Nostr Event Link QRコード**: `nostr:nevent1...` 形式
+   - qrcode ライブラリ（v1.5.4）を使用した2つのQRコード並列表示
+   - 各QRコードに明確なラベル付け
+
+5. **Nostr Event URI生成**
+   - 作成されたkind1イベントから`nevent1`エンコード
+   - event ID、relays、author、kindを含むeventPointer作成
+   - NIP-19準拠の`nostr:nevent1...`形式URI生成
 
 #### 技術仕様
 
 - **Nostrリレー**: `['wss://nos.lol/']` etc.
-- **イベント内容**: `"test"`（kind 1）
+- **イベント内容**: `"Fortune Slip Request"`（kind 1）
 - **支払い金額**: 1 sat（1000 millisatoshi）
-- **QRコード形式**: `lightning:lnbc...`
+- **QRコード形式**: 
+  - Lightning Invoice: `lightning:lnbc...`
+  - Nostr Event Link: `nostr:nevent1...`
+- **nevent1エンコード**: NIP-19準拠のeventPointer（ID, relays, author, kind）
+- **QRコード設定**: 256px幅、PNG形式、マージン1px
 - **エラー処理**: ユーザーへのエラーメッセージ表示
+
+#### QRコード生成機能詳細
+
+```typescript
+// Lightning Invoice QRコード生成
+const qrCode = await generateLightningQRCode(invoice.pr);
+// → `lightning:lnbc...`形式でQR生成
+
+// Nostr Event Link QRコード生成  
+const neventUri = createNeventUri(textEvent);
+const neventQrCode = await generateGenericQRCode(neventUri);
+// → `nostr:nevent1...`形式でQR生成（プレフィックスなし）
+```
 
 #### 処理フロー
 
@@ -125,7 +148,10 @@ src/
 5. ライトニングアドレスからLNURL-payエンドポイントを取得
 6. Zapリクエスト（kind 9734）を作成
 7. インボイスを取得（1 sat）
-8. QRコード生成・表示
+8. **Lightning Invoice QRコード**を生成・表示
+9. **作成されたNostr EventからneventURIを生成**
+10. **Nostr Event Link QRコード**を生成・表示
+11. **2つのQRコードを縦に並べて同時表示**
 
 ### 設定画面 (`src/routes/settings/+page.svelte`)
 

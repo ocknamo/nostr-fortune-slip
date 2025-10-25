@@ -80,3 +80,17 @@ export function createMetadataEvent(pubkey: string, lud16?: string): NostrEvent 
 
   return event as NostrEvent;
 }
+
+/**
+ * NostrEventからnevent1形式のURIを生成
+ */
+export function createNeventUri(event: NostrEvent): string {
+  const eventPointer = {
+    id: event.id,
+    relays: RELAYS,
+    author: event.pubkey,
+    kind: event.kind,
+  };
+
+  return nip19.neventEncode(eventPointer);
+}

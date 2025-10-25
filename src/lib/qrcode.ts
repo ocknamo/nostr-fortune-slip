@@ -19,12 +19,31 @@ const QR_OPTIONS: QRCode.QRCodeToDataURLOptions = {
  * @returns Data URL形式のQRコード画像
  */
 export async function generateLightningQRCode(invoice: string): Promise<string> {
-  try {
-    // lightning: プレフィックスを追加
-    const lightningUri = `lightning:${invoice}`;
+  // lightning: プレフィックスを追加
+  const lightningUri = `lightning:${invoice}`;
+  return generateQRCode(lightningUri);
+}
 
-    // QRコードを生成
-    const qrCodeDataURL = await QRCode.toDataURL(lightningUri, QR_OPTIONS);
+/**
+ * Nostr event用のQRコードを生成
+ * @param nevent bolt11 invoice string
+ * @returns Data URL形式のQRコード画像
+ */
+export async function generateNostrQRCode(event: string): Promise<string> {
+  // lightning: プレフィックスを追加
+  const eventUri = `nostr:${event}`;
+  return generateQRCode(eventUri);
+}
+
+/**
+ * 汎用QRコードを生成（プレフィックスなし）
+ * @param content QRコードにエンコードする内容
+ * @returns Data URL形式のQRコード画像
+ */
+export async function generateQRCode(content: string): Promise<string> {
+  try {
+    // QRコードを生成（プレフィックスなし）
+    const qrCodeDataURL = await QRCode.toDataURL(content, QR_OPTIONS);
 
     return qrCodeDataURL;
   } catch (error) {

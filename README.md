@@ -6,7 +6,9 @@ Nostr Fortune Slipは、NostrプロトコルとLightning Networkを統合した�
 
 ## 機能
 
+- **デュアルQRコード表示**: Lightning Invoice QRコードとNostr Event Link QRコード（`nostr:nevent1...`形式）を並列表示
 - **Lightning QRコード生成**: Zapリクエスト対応のLightning Invoice QRコードを生成
+- **Nostr Event QRコード**: 作成されたkind1イベントへの`nostr:nevent1`リンクをQRコード化
 - **Nostr統合**: kind 1イベントの作成・署名・送信、Zapリクエスト（kind 9734）の生成
 - **Zap検知機能**: リアルタイムでZap Receiptを検知し、おみくじ結果を表示
 - **設定管理**: ライトニングアドレス、Nostr秘密鍵の安全な管理
