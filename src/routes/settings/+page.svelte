@@ -8,6 +8,7 @@ let nostrPrivateKey = '';
 let coinosId = '';
 let coinosPassword = '';
 let showPassword = false;
+let allowDirectNostrZap = true; // デフォルトtrue
 
 // UI状態
 let showSuccessMessage = false;
@@ -21,6 +22,9 @@ onMount(() => {
     nostrPrivateKey = localStorage.getItem('nostrPrivateKey') || '';
     coinosId = localStorage.getItem('coinosId') || '';
     coinosPassword = localStorage.getItem('coinosPassword') || '';
+    const storedAllowDirectNostrZap = localStorage.getItem('allowDirectNostrZap');
+    // デフォルトはtrue、明示的にfalseの場合のみfalse
+    allowDirectNostrZap = storedAllowDirectNostrZap === null ? true : storedAllowDirectNostrZap === 'true';
   }
 });
 
@@ -62,6 +66,7 @@ function handleSave() {
     localStorage.setItem('nostrPrivateKey', nostrPrivateKey);
     localStorage.setItem('coinosId', coinosId);
     localStorage.setItem('coinosPassword', coinosPassword);
+    localStorage.setItem('allowDirectNostrZap', allowDirectNostrZap.toString());
 
     showSuccessMessage = true;
     setTimeout(() => {
@@ -87,12 +92,14 @@ function handleClearData() {
     localStorage.removeItem('nostrPrivateKey');
     localStorage.removeItem('coinosId');
     localStorage.removeItem('coinosPassword');
+    localStorage.removeItem('allowDirectNostrZap');
 
     // フォームをクリア
     lightningAddress = '';
     nostrPrivateKey = '';
     coinosId = '';
     coinosPassword = '';
+    allowDirectNostrZap = true; // デフォルト値にリセット
 
     showDeleteMessage = true;
     setTimeout(() => {
@@ -239,6 +246,28 @@ function handleClearData() {
           {#if errors.coinosPassword}
             <p class="mt-1 text-sm text-red-600">{errors.coinosPassword}</p>
           {/if}
+        </div>
+
+        <!-- Nostrへの直接のzapを許可 -->
+        <div class="border-t border-gray-200 pt-6">
+          <div class="flex items-start">
+            <div class="flex items-center h-5">
+              <input
+                id="allow-direct-nostr-zap"
+                type="checkbox"
+                bind:checked={allowDirectNostrZap}
+                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+            </div>
+            <div class="ml-3 text-sm">
+              <label for="allow-direct-nostr-zap" class="font-medium text-gray-700">
+                Nostrへの直接のzapを許可
+              </label>
+              <p class="text-gray-500 mt-1">
+                有効にすると、Nostrイベントへの直接zap用のQRコードも表示されます。無効にすると、Lightningインボイスのみが表示され、より厳密なzap検証が行われます。
+              </p>
+            </div>
+          </div>
         </div>
 
         <!-- 保存ボタン -->

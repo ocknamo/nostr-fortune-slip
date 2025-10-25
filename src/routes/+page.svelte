@@ -13,8 +13,9 @@ import {
   handleZapReceived,
   type ZapReceiptSubscription,
   type NostrEvent,
+  generateLuckyNumber,
 } from '$lib/nostr';
-import { generateLightningQRCode, generateQRCode as generateGenericQRCode, generateNostrQRCode } from '$lib/qrcode';
+import { generateLightningQRCode, generateNostrQRCode } from '$lib/qrcode';
 import { nip57 } from 'nostr-tools';
 
 // UI状態
@@ -35,12 +36,16 @@ let currentTargetEventId: string | null = null;
 // 設定データ
 let lightningAddress = '';
 let nostrPrivateKey = '';
+let allowDirectNostrZap = true; // デフォルトtrue
 
 // 設定データを読み込み
 onMount(() => {
   if (typeof window !== 'undefined') {
     lightningAddress = localStorage.getItem('lightningAddress') || '';
     nostrPrivateKey = localStorage.getItem('nostrPrivateKey') || '';
+    const storedAllowDirectNostrZap = localStorage.getItem('allowDirectNostrZap');
+    // デフォルトはtrue、明示的にfalseの場合のみfalse
+    allowDirectNostrZap = storedAllowDirectNostrZap === null ? true : storedAllowDirectNostrZap === 'true';
   }
 });
 
@@ -76,31 +81,25 @@ async function onZapDetected(zapReceipt: NostrEvent) {
   // QRコードを非表示
   qrCodeDataUrl = '';
   neventQrCodeDataUrl = '';
+  // 番号生成
+  randomNumber = generateLuckyNumber(1, 20);
+  // 状態を更新
+  zapDetected = true;
+  isWaitingForZap = false;
 
   try {
     // フォーチュン機能を実行（メンション付きkind1イベントを送信）
     if (currentTargetEventId && nostrPrivateKey) {
-      const fortuneResult = await handleZapReceived(zapReceipt, currentTargetEventId, nostrPrivateKey);
+      const fortuneResult = await handleZapReceived(zapReceipt, currentTargetEventId, nostrPrivateKey, randomNumber);
 
-      if (fortuneResult.success && fortuneResult.luckyNumber) {
+      if (fortuneResult) {
         console.log('[Fortune Slip] Fortune message sent successfully!');
         successMessage = 'Zapを受信しました！フォーチュンメッセージを送信しました🎉';
-        // メッセージ送信で使ったのと同じラッキーナンバーを使用
-        randomNumber = fortuneResult.luckyNumber;
       } else {
         console.warn('[Fortune Slip] Failed to send fortune message');
         successMessage = 'Zapを受信しました！';
-        // エラーの場合は別途生成
-        randomNumber = Math.floor(Math.random() * 100) + 1;
       }
-    } else {
-      // 設定不備の場合は別途生成
-      randomNumber = Math.floor(Math.random() * 100) + 1;
     }
-
-    // 状態を更新
-    zapDetected = true;
-    isWaitingForZap = false;
 
     // サブスクリプション停止
     stopZapMonitoring();
@@ -189,11 +188,10 @@ async function generateQRCode() {
       zapRequest,
       onZapDetected,
       300000, // 5分タイムアウト
+      allowDirectNostrZap, // 設定を渡す
     );
 
     isWaitingForZap = true;
-
-    successMessage = 'QRコードが生成されました！支払いを待機しています...';
   } catch (error) {
     console.error('QR code generation failed:', error);
     errorMessage = error instanceof Error ? error.message : 'QRコードの生成に失敗しました。';
@@ -225,6 +223,22 @@ async function generateQRCode() {
           </div>
         {/if}
 
+        <!-- Zap待機中のステータス -->
+        {#if isWaitingForZap}
+          <div class="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4">
+            <div class="flex items-center">
+              <svg class="animate-spin h-5 w-5 text-blue-600 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span class="text-blue-800 font-medium">Zapの受信を待機中...</span>
+            </div>
+            <p class="text-sm text-blue-600 mt-2">
+              QRコードをスキャンして1 satを送金してください。支払いが確認されるとおみくじの番号が表示されます。
+            </p>
+          </div>
+        {/if}
+
         <!-- Zap検知後のランダム数字表示 -->
         {#if zapDetected && randomNumber}
           <div class="mb-6">
@@ -247,17 +261,15 @@ async function generateQRCode() {
           </div>
         {:else if qrCodeDataUrl}
           <div class="mb-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">QR Codes</h3>
-
-            <!-- Nostr Event QR Code -->
-            {#if neventQrCodeDataUrl}
+            <!-- Nostr Event QR Code (設定で許可されている場合のみ表示) -->
+            {#if neventQrCodeDataUrl && allowDirectNostrZap}
               <div class="mb-4">
                 <h4 class="text-sm font-medium text-gray-700 mb-2 text-center">Zap to Nostr Event</h4>
                 <div class="flex justify-center mb-2">
                   <img src={neventQrCodeDataUrl} alt="Nostr Event QR Code" class="max-w-full h-auto rounded-lg shadow-sm" style="max-width: 200px;" />
                 </div>
               </div>
-              <p class="mb-8">OR</p>
+              <p class="mb-4">OR</p>
             {/if}
 
             <!-- Lightning Invoice QR Code -->
@@ -267,24 +279,6 @@ async function generateQRCode() {
                 <img src={qrCodeDataUrl} alt="Lightning Invoice QR Code" class="max-w-full h-auto rounded-lg shadow-sm" style="max-width: 200px;" />
               </div>
             </div>
-            
-
-            
-            <!-- Zap待機中のステータス -->
-            {#if isWaitingForZap}
-              <div class="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4">
-                <div class="flex items-center">
-                  <svg class="animate-spin h-5 w-5 text-blue-600 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <span class="text-blue-800 font-medium">Zapの受信を待機中...</span>
-                </div>
-                <p class="text-sm text-blue-600 mt-2">
-                  QRコードをスキャンして1 satを送金してください。支払いが確認されるとおみくじの結果が表示され、あなたにフォーチュンメッセージが送信されます。
-                </p>
-              </div>
-            {/if}
             
             <p class="text-sm text-gray-600 text-center">
               このQRコードは1 satのLightning支払い用です。
@@ -316,7 +310,7 @@ async function generateQRCode() {
         <!-- QRコード生成ボタン -->
         <button
           on:click={generateQRCode}
-          disabled={isLoading}
+          disabled={isLoading || isWaitingForZap}
           class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 mb-4"
         >
           {#if isLoading}

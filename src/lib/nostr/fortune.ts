@@ -4,10 +4,10 @@ import { decodeNsec } from './events.js';
 import { publishEvent } from './utils.js';
 
 /**
- * ラッキーナンバーを生成（1-20の範囲）
+ * ラッキーナンバーを生成（min-maxの範囲）
  */
-export function generateLuckyNumber(): number {
-  return Math.floor(Math.random() * 20) + 1;
+export function generateLuckyNumber(min: number, max: number): number {
+  return Math.floor(Math.random() * max) + min;
 }
 
 /**
@@ -73,17 +73,15 @@ export async function handleZapReceived(
   zapReceipt: NostrEvent,
   originalEventId: string,
   privateKeyNsec: string,
-): Promise<{ success: boolean; luckyNumber?: number }> {
+  luckyNumber: number,
+): Promise<boolean> {
   try {
     // Zapした人の公開鍵を取得
     const zapperPubkey = extractZapperPubkey(zapReceipt);
     if (!zapperPubkey) {
       console.error('Could not extract zapper pubkey from zap receipt');
-      return { success: false };
+      return false;
     }
-
-    // ラッキーナンバーを生成
-    const luckyNumber = generateLuckyNumber();
 
     console.log(`Generating fortune for zapper: ${zapperPubkey}, lucky number: ${luckyNumber}`);
 
@@ -96,9 +94,9 @@ export async function handleZapReceived(
     // イベントを送信
     await publishEvent(mentionEvent);
 
-    return { success: true, luckyNumber };
+    return true;
   } catch (error) {
     console.error('Error handling zap receipt:', error);
-    return { success: false };
+    return false;
   }
 }

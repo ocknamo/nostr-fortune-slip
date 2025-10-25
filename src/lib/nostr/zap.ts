@@ -42,7 +42,12 @@ export async function getZapInvoiceFromEndpoint(
  * Zap Receiptの妥当性を検証
  * NIP-57 Appendix Fの仕様に基づく
  */
-export function validateZapReceipt(zapReceipt: NostrEvent, targetEventId: string, zapRequest: NostrEvent): boolean {
+export function validateZapReceipt(
+  zapReceipt: NostrEvent,
+  targetEventId: string,
+  zapRequest: NostrEvent,
+  allowDirectNostrZap = true,
+): boolean {
   try {
     // kind 9735であることを確認
     if (zapReceipt.kind !== 9735) {
@@ -67,17 +72,19 @@ export function validateZapReceipt(zapReceipt: NostrEvent, targetEventId: string
     }
 
     // descriptionがzap requestと一致することを確認
-    // Eventへの直接zapも有効にするためコメントアウト
-    // try {
-    //   const description = JSON.parse(descriptionTag[1]);
-    //   if (description.id !== zapRequest.id) {
-    //     console.warn('Zap receipt description ID mismatch');
-    //     return false;
-    //   }
-    // } catch (error) {
-    //   console.warn('Invalid zap receipt description JSON:', error);
-    //   return false;
-    // }
+    // allowDirectNostrZapがfalseの場合のみ厳密に検証
+    if (!allowDirectNostrZap) {
+      try {
+        const description = JSON.parse(descriptionTag[1]);
+        if (description.id !== zapRequest.id) {
+          console.warn('Zap receipt description ID mismatch');
+          return false;
+        }
+      } catch (error) {
+        console.warn('Invalid zap receipt description JSON:', error);
+        return false;
+      }
+    }
 
     return true;
   } catch (error) {
@@ -95,6 +102,7 @@ export function subscribeToZapReceipts(
   zapRequest: NostrEvent,
   onZapReceived: (zapReceipt: NostrEvent) => void,
   timeoutMs: number = 300000, // 5分のタイムアウト
+  allowDirectNostrZap = true, // デフォルトtrue
 ): ZapReceiptSubscription {
   const pool = new SimplePool();
   const subscriptionId = `zap-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -121,7 +129,7 @@ export function subscribeToZapReceipts(
         const zapReceipt = event as NostrEvent;
 
         // Zap Receiptの妥当性を検証
-        if (validateZapReceipt(zapReceipt, targetEventId, zapRequest)) {
+        if (validateZapReceipt(zapReceipt, targetEventId, zapRequest, allowDirectNostrZap)) {
           console.log(`[Zap Monitor] Valid zap receipt detected for event: ${targetEventId}`);
           onZapReceived(zapReceipt);
         } else {
