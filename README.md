@@ -11,6 +11,7 @@ Nostr Fortune Slipは、NostrプロトコルとLightning Networkを統合した�
 - **Nostr Event QRコード**: 作成されたkind1イベントへの`nostr:nevent1`リンクをQRコード化
 - **Nostr統合**: kind 1イベントの作成・署名・送信、Zapリクエスト（kind 9734）の生成
 - **Zap検知機能**: リアルタイムでZap Receiptを検知し、おみくじ結果を表示
+- **フォーチュンメッセージ**: Zap検知後に送信者へメンション付きでラッキーナンバー（1-100）を送信
 - **設定管理**: ライトニングアドレス、Nostr秘密鍵の安全な管理
 - **レスポンシブUI**: モバイルファーストなTailwind CSSベースのデザイン
 - **セキュリティ**: LocalStorage使用時の適切な警告表示
@@ -77,6 +78,7 @@ src/
 │   │   ├── types.ts        # 型定義
 │   │   ├── events.ts       # イベント作成機能
 │   │   ├── zap.ts          # Zap関連機能
+│   │   ├── fortune.ts      # フォーチュンメッセージ機能
 │   │   ├── utils.ts        # ユーティリティ機能
 │   │   └── *.spec.ts       # 機能別ユニットテスト
 │   ├── qrcode.ts          # QRコード生成
@@ -151,7 +153,7 @@ npm run fix
    - **Coinos ID**: Coinosアカウント（現在未使用）
    - **Coinosパスワード**: Coinosパスワード（現在未使用）
 
-### 2. QRコード生成
+### 2. フォーチュンおみくじ
 
 1. メイン画面で「QRコードを生成」ボタンをクリック
 2. 以下の処理が自動実行：
@@ -159,6 +161,10 @@ npm run fix
    - Zapリクエスト（kind 9734）の生成
    - Lightning Invoice（1 sat）の取得
    - QRコードの生成・表示
+3. Zapが送金されると：
+   - Zap Receipt（kind 9735）を検知
+   - ラッキーナンバー（1-100）を生成・表示
+   - 送金者に`nostr:npub..`形式でメンション付きフォーチュンメッセージを自動送信
 
 ### 3. セキュリティ注意事項
 

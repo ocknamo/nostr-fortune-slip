@@ -2,7 +2,7 @@
 
 ## プロジェクト概要
 
-Nostr Fortune Slipは、NostrプロトコルとLightning Networkを統合したおみくじアプリケーションです。ユーザーが1 satを支払うと、1-20のラッキーナンバーが表示される仕組みです。このドキュメントでは、設定画面、メイン画面、およびモジュール化されたコード構造の設計・実装について説明します。
+Nostr Fortune Slipは、NostrプロトコルとLightning Networkを統合したおみくじアプリケーションです。ユーザーが1 satを支払うと、1-100のラッキーナンバーが表示され、Zapした人に自動でメンション付きフォーチュンメッセージが送信される仕組みです。このドキュメントでは、設定画面、メイン画面、フォーチュンメッセージ機能、およびモジュール化されたコード構造の設計・実装について説明します。
 
 ## 技術スタック
 
@@ -47,6 +47,9 @@ Nostr Fortune Slipは、NostrプロトコルとLightning Networkを統合した�
 - **Zapリクエスト生成**: 発行したイベントに対するZapリクエスト（kind 9734）を作成
 - **ライトニングインボイス取得**: ライトニングアドレスから1 sat（1000 millisatoshi）のインボイスを取得
 - **QRコード表示**: `lightning:` + bolt11インボイス形式のQRコードを表示
+- **Zap検知機能**: kind 9735 Zap Receiptをリアルタイム監視
+- **フォーチュンメッセージ送信**: Zap検知後に送信者へ`nostr:npub..`形式でメンション付きメッセージ自動送信
+- **ラッキーナンバー表示**: 1-100の範囲でラッキーナンバーを生成・表示
 - **エラーハンドリング**: ライトニングアドレス無効やリレー接続失敗時のエラーメッセージ表示
 
 ## 実装詳細
@@ -62,9 +65,11 @@ src/
 │   │   ├── types.ts            # 型定義（NostrEvent, MetadataContent等）
 │   │   ├── events.ts           # イベント作成機能
 │   │   ├── zap.ts              # Zap関連機能（検知・バリデーション）
+│   │   ├── fortune.ts          # フォーチュンメッセージ機能
 │   │   ├── utils.ts            # ユーティリティ機能
 │   │   ├── events.spec.ts      # イベント作成テスト（8テスト）
 │   │   ├── zap.spec.ts         # Zap機能テスト（12テスト）
+│   │   ├── fortune.spec.ts     # フォーチュンテスト（11テスト）
 │   │   └── utils.spec.ts       # ユーティリティテスト（3テスト）
 │   ├── qrcode.ts              # QRコード生成
 │   └── *.spec.ts              # その他のテスト
@@ -82,7 +87,7 @@ src/
 
 - **機能別テスト**: 各モジュールに対応するテストファイル
 - **重複排除**: 元の巨大テストファイルを削除
-- **カバレッジ向上**: 合計27テスト（削除前61テスト→削除後40テスト）
+- **カバレッジ向上**: 合計34テスト（フォーチュン機能11テスト追加）
 - **成功率100%**: 全テストがパス
 
 ### メイン画面 (`src/routes/+page.svelte`)
@@ -116,13 +121,18 @@ src/
 
 #### 技術仕様
 
-- **Nostrリレー**: `['wss://nos.lol/']` etc.
+- **Nostrリレー**: `['wss://relay.damus.io/', 'wss://nos.lol/', 'wss://relay.nostr.band/', 'wss://r.kojira.io/']`
 - **イベント内容**: `"Fortune Slip Request"`（kind 1）
 - **支払い金額**: 1 sat（1000 millisatoshi）
 - **QRコード形式**: 
   - Lightning Invoice: `lightning:lnbc...`
   - Nostr Event Link: `nostr:nevent1...`
 - **nevent1エンコード**: NIP-19準拠のeventPointer（ID, relays, author, kind）
+- **フォーチュンメッセージ**: 
+  - メンション形式: `nostr:npub1...`（NIP-19準拠）
+  - メッセージ言語: 日本語（絵文字付き）
+  - ラッキーナンバー範囲: 1-100
+- **Nostrタグ**: `p`タグ（メンション）+ `e`タグ（リプライ）
 - **QRコード設定**: 256px幅、PNG形式、マージン1px
 - **エラー処理**: ユーザーへのエラーメッセージ表示
 
@@ -152,6 +162,13 @@ const neventQrCode = await generateGenericQRCode(neventUri);
 9. **作成されたNostr EventからneventURIを生成**
 10. **Nostr Event Link QRコード**を生成・表示
 11. **2つのQRコードを縦に並べて同時表示**
+12. **Zap Receipt監視開始**（kind 9735イベント検知）
+13. **Zap検知時の処理**:
+    - Zapした人の公開鍵を抽出
+    - 1-100の範囲でラッキーナンバー生成
+    - `nostr:npub..`形式でメンション付きフォーチュンメッセージ作成
+    - kind 1イベント（`p`タグ + `e`タグ付き）として送信
+    - UIに同じラッキーナンバーを表示
 
 ### 設定画面 (`src/routes/settings/+page.svelte`)
 
