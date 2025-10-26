@@ -1,5 +1,6 @@
 <script lang="ts">
 import { goto } from '$app/navigation';
+import { base } from '$app/paths';
 import { onMount } from 'svelte';
 
 // フォームデータ
@@ -66,7 +67,7 @@ function handleSave() {
 
 // メイン画面に戻る
 function goBack() {
-  goto('/');
+  goto(base || '/');
 }
 
 // API Token表示切り替え

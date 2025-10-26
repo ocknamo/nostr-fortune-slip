@@ -1,5 +1,6 @@
 <script lang="ts">
 import { goto } from '$app/navigation';
+import { base } from '$app/paths';
 import { onMount, onDestroy } from 'svelte';
 import {
   decodeNsec,
@@ -59,7 +60,7 @@ onDestroy(() => {
 });
 
 function navigateToSettings() {
-  goto('/settings');
+  goto(`${base}/settings`);
 }
 
 function clearMessages() {
