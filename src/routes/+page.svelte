@@ -120,15 +120,15 @@ async function onZapDetected(zapReceipt: NostrEvent) {
 
 function onZapError(error: string) {
   console.error('[Fortune Slip] Zap verification error:', error);
-  
+
   // Zapエラーが発生した場合
   errorMessage = `Zap検証エラー: ${error}`;
-  
+
   // 待機状態を終了
   isWaitingForZap = false;
   qrCodeDataUrl = '';
   neventQrCodeDataUrl = '';
-  
+
   // サブスクリプション停止
   stopZapMonitoring();
 }
@@ -217,6 +217,10 @@ async function generateQRCode() {
   } finally {
     isLoading = false;
   }
+}
+
+function showSubmit() {
+  return !qrCodeDataUrl && !neventQrCodeDataUrl && !isWaitingForZap && !zapDetected;
 }
 </script>
 
@@ -327,11 +331,12 @@ async function generateQRCode() {
         {/if}
 
         <!-- QRコード生成ボタン -->
-        <button
-          on:click={generateQRCode}
+         {#if showSubmit()}
+         <button
+         on:click={generateQRCode}
           disabled={isLoading || isWaitingForZap}
           class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 mb-4"
-        >
+          >
           {#if isLoading}
             <div class="flex items-center justify-center">
               <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -340,10 +345,11 @@ async function generateQRCode() {
               </svg>
               生成中...
             </div>
-          {:else}
+            {:else}
             QRコードを生成
+            {/if}
+          </button>
           {/if}
-        </button>
 
         <!-- 設定画面への遷移ボタン -->
         <button

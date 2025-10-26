@@ -211,7 +211,11 @@ export function subscribeToZapReceipts(
           } else {
             console.warn(`[Zap Monitor] Invalid zap receipt for event: ${targetEventId}`, verificationResult.error);
             // Coinos検証失敗の場合、エラーコールバックを呼び出す
-            if (verificationResult.error && verificationResult.error.includes('Coinos verification failed') && onZapError) {
+            if (
+              verificationResult.error &&
+              verificationResult.error.includes('Coinos verification failed') &&
+              onZapError
+            ) {
               onZapError(verificationResult.error);
             }
           }
