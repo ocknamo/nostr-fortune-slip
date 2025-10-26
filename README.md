@@ -206,6 +206,28 @@ npm run fix
 - Biomeによるフォーマット・リントルールに従うこと
 - TypeScript型チェックを通すこと
 
+## GitHub Pagesへのデプロイ
+
+このプロジェクトはGitHub Pagesへの自動デプロイに対応しています。
+
+### デプロイの設定
+
+1. GitHubリポジトリで「Settings」→「Pages」を開く
+2. Source: 「GitHub Actions」を選択
+3. mainブランチにプッシュすると自動的にデプロイされます
+
+### デプロイワークフロー
+
+`.github/workflows/deploy.yml`でGitHub Pagesへの自動デプロイが設定されています：
+
+- **トリガー**: mainブランチへのプッシュ
+- **ビルド**: SvelteKitで静的サイト生成（`npm run build`）
+- **デプロイ**: buildディレクトリの内容をGitHub Pagesに公開
+
+### 手動デプロイ
+
+GitHub Actions画面から「Deploy to GitHub Pages」ワークフローを手動実行することも可能です。
+
 ## ライセンス
 
 このプロジェクトはMITライセンスの下で公開されています。詳細は[LICENSE](LICENSE)ファイルを参照してください。
