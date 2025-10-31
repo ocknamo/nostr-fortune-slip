@@ -8,19 +8,36 @@ let lightningAddress = '';
 let nostrPrivateKey = '';
 let coinosApiToken = '';
 let showApiToken = false;
+let showPin = false; // PIN表示切り替え
 let allowDirectNostrZap = true; // デフォルトtrue
+let pinCode = ''; // PIN設定用
 
 // UI状態
 let showSuccessMessage = false;
 let showDeleteMessage = false;
 let errors: Record<string, string> = {};
+let isAuthenticated = false; // PIN認証状態
 
 // ローカルストレージからデータを読み込み
 onMount(() => {
   if (typeof window !== 'undefined') {
+    // PIN認証チェック
+    const storedPin = localStorage.getItem('settingsPin') || '1122'; // デフォルトPIN
+    const inputPin = prompt('設定画面にアクセスするには4桁のPINを入力してください:');
+
+    if (inputPin !== storedPin) {
+      alert('PINが正しくありません。');
+      goto(base || '/');
+      return;
+    }
+
+    isAuthenticated = true;
+
+    // 設定データを読み込み
     lightningAddress = localStorage.getItem('lightningAddress') || '';
     nostrPrivateKey = localStorage.getItem('nostrPrivateKey') || '';
     coinosApiToken = localStorage.getItem('coinosApiToken') || '';
+    pinCode = storedPin;
     const storedAllowDirectNostrZap = localStorage.getItem('allowDirectNostrZap');
     // デフォルトはtrue、明示的にfalseの場合のみfalse
     allowDirectNostrZap = storedAllowDirectNostrZap === null ? true : storedAllowDirectNostrZap === 'true';
@@ -45,6 +62,13 @@ function validateForm(): boolean {
     errors.nostrPrivateKey = 'nsec1で始まる有効な秘密鍵を入力してください';
   }
 
+  // PIN検証
+  if (!pinCode.trim()) {
+    errors.pinCode = 'PINは必須です';
+  } else if (!/^\d{4}$/.test(pinCode)) {
+    errors.pinCode = '4桁の数字を入力してください';
+  }
+
   // Coinos API Token（オプショナル）はバリデーションなし
 
   return Object.keys(errors).length === 0;
@@ -57,6 +81,7 @@ function handleSave() {
     localStorage.setItem('nostrPrivateKey', nostrPrivateKey);
     localStorage.setItem('coinosApiToken', coinosApiToken);
     localStorage.setItem('allowDirectNostrZap', allowDirectNostrZap.toString());
+    localStorage.setItem('settingsPin', pinCode);
 
     showSuccessMessage = true;
     setTimeout(() => {
@@ -75,6 +100,11 @@ function toggleApiTokenVisibility() {
   showApiToken = !showApiToken;
 }
 
+// PIN表示切り替え
+function togglePinVisibility() {
+  showPin = !showPin;
+}
+
 // データ削除処理
 function handleClearData() {
   if (confirm('保存されているすべての設定データを削除しますか？この操作は取り消せません。')) {
@@ -82,6 +112,7 @@ function handleClearData() {
     localStorage.removeItem('nostrPrivateKey');
     localStorage.removeItem('coinosApiToken');
     localStorage.removeItem('allowDirectNostrZap');
+    localStorage.removeItem('settingsPin');
     // 旧データも削除（後方互換性のため）
     localStorage.removeItem('coinosId');
     localStorage.removeItem('coinosPassword');
@@ -91,6 +122,7 @@ function handleClearData() {
     nostrPrivateKey = '';
     coinosApiToken = '';
     allowDirectNostrZap = true; // デフォルト値にリセット
+    pinCode = '1128'; // デフォルトPINにリセット
 
     showDeleteMessage = true;
     setTimeout(() => {
@@ -100,6 +132,7 @@ function handleClearData() {
 }
 </script>
 
+{#if isAuthenticated}
 <div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
   <div class="max-w-md mx-auto">
     <div class="bg-white shadow rounded-lg p-6">
@@ -149,6 +182,47 @@ function handleClearData() {
       </div>
 
       <form on:submit|preventDefault={handleSave} class="space-y-6">
+        <!-- PIN設定 -->
+        <div>
+          <label for="pin-code" class="block text-sm font-medium text-gray-700 mb-2">
+            PIN（4桁の数字）
+          </label>
+          <div class="relative">
+            <input
+              id="pin-code"
+              type={showPin ? 'text' : 'password'}
+              inputmode="numeric"
+              pattern="[0-9]*"
+              maxlength="4"
+              bind:value={pinCode}
+              placeholder="1122"
+              class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              class:border-red-500={errors.pinCode}
+            />
+            <button
+              type="button"
+              on:click={togglePinVisibility}
+              class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+            >
+              {#if showPin}
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                </svg>
+              {:else}
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              {/if}
+            </button>
+          </div>
+          {#if errors.pinCode}
+            <p class="mt-1 text-sm text-red-600">{errors.pinCode}</p>
+          {:else}
+            <p class="mt-1 text-sm text-gray-500">設定画面へのアクセスを保護するための4桁の数字</p>
+          {/if}
+        </div>
+
         <!-- ライトニングアドレス -->
         <div>
           <label for="lightning-address" class="block text-sm font-medium text-gray-700 mb-2">
@@ -287,3 +361,4 @@ function handleClearData() {
     </div>
   </div>
 </div>
+{/if}
