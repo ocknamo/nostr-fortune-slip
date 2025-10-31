@@ -5,4 +5,3 @@ export * from './nostr/index.js';
 
 // その他のライブラリ
 export * from './qrcode.js';
-export * from './lightning.js';
