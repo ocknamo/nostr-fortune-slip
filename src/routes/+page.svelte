@@ -30,6 +30,7 @@ let successMessage = '';
 let isWaitingForZap = false;
 let zapDetected = false;
 let randomNumber: number | null = null;
+let publishedToRelay = false;
 
 // Zap検知用の状態
 let zapSubscription: ZapReceiptSubscription | null = null;
@@ -222,8 +223,11 @@ async function generateQRCode() {
     const textEvent = createTextEvent(privateKeyBytes, 'Fortune Slip Request');
     try {
       await publishEvent(textEvent);
+      publishedToRelay = true;
     } catch (error) {
       console.warn('[Fortune Slip] Failed to publish event to relays, but continuing:', error);
+      publishedToRelay = false;
+      errorMessage = 'Nostrリレーへの接続に失敗しました。Lightning支払いは可能ですが、Nostr Zapは利用できません。';
       // リレーへの接続に失敗してもQRコード生成は続行
     }
 
@@ -365,8 +369,8 @@ function showSubmit() {
           </div>
         {:else if qrCodeDataUrl}
           <div class="mb-6">
-            <!-- Nostr Event QR Code (設定で許可されている場合のみ表示) -->
-            {#if neventQrCodeDataUrl && allowDirectNostrZap}
+            <!-- Nostr Event QR Code (設定で許可され、リレーにパブリッシュ成功時のみ表示) -->
+            {#if neventQrCodeDataUrl && allowDirectNostrZap && publishedToRelay}
               <div class="mb-4">
                 <h4 class="text-sm font-medium text-gray-700 mb-2 text-center">Zap to Nostr Event</h4>
                 <div class="flex justify-center mb-2">

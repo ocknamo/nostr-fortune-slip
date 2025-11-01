@@ -1,6 +1,6 @@
 /**
- * ランダムな8byteの値を生成してbase64エンコードした文字列を返す
- * @returns base64エンコードされた8byteのランダム文字列
+ * ランダムな8byteの値を生成してbase64urlエンコードした文字列を返す
+ * @returns base64urlエンコードされた8byteのランダム文字列（URL safe）
  */
 export function generateRandomBase64(): string {
   // 8バイトのランダムな値を生成
@@ -10,5 +10,9 @@ export function generateRandomBase64(): string {
   // base64エンコード
   const base64 = btoa(String.fromCharCode(...randomBytes));
 
-  return base64;
+  // base64urlに変換（URL safe）
+  // + を - に、/ を _ に変換し、パディングの = を削除
+  const base64url = base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+  return base64url;
 }
