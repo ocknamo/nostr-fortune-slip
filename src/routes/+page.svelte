@@ -220,7 +220,12 @@ async function generateQRCode() {
 
     // 2. Nostr kind 1イベントを作成・送信
     const textEvent = createTextEvent(privateKeyBytes, 'Fortune Slip Request');
-    await publishEvent(textEvent);
+    try {
+      await publishEvent(textEvent);
+    } catch (error) {
+      console.warn('[Fortune Slip] Failed to publish event to relays, but continuing:', error);
+      // リレーへの接続に失敗してもQRコード生成は続行
+    }
 
     // 3. recipientのmetadata eventを作成（簡易版）
     // 実際のアプリではリレーから取得するが、ここでは設定値から作成
