@@ -10,12 +10,16 @@ Nostr Fortune Slipは、NostrプロトコルとLightning Networkを統合した�
 - **Lightning QRコード生成**: Zapリクエスト対応のLightning Invoice QRコードを生成
 - **Nostr Event QRコード**: 作成されたkind1イベントへの`nostr:nevent1`リンクをQRコード化
 - **Nostr統合**: kind 1イベントの作成・署名・送信、Zapリクエスト（kind 9734）の生成
+- **Payment ID追跡**: ランダムな8byte値（base64url形式）をZapコメントに埋め込み、支払い検証に使用
 - **Zap検知機能**: リアルタイムでZap Receiptを検知し、おみくじ結果を表示
 - **Coinos API検証**: Zapレシート受信後にCoinos APIで入金を追加検証（preimage照合）
+- **Coinosポーリング**: Zapサブスクリプションのフォールバックとして、Coinos APIを定期監視
+- **並列検知**: Zapサブスクリプションとポーリングを同時実行、いずれかで支払いを検知
 - **フォーチュンメッセージ**: Zap検知後に送信者へメンション付きでラッキーナンバー（1-20）を送信
 - **設定管理**: ライトニングアドレス、Nostr秘密鍵、Coinos Read-Only API Tokenの安全な管理
 - **Zap検証設定**: 直接Nostr zapの許可/不許可を設定可能（セキュリティレベルの調整）
-- **エラー表示**: Coinos API検証エラーを画面に表示して詳細情報を提供
+- **リレー耐性**: Nostrリレー接続失敗時でもQRコード生成を継続
+- **エラー表示**: Coinos API検証エラーやリレー接続エラーを画面に表示
 - **レスポンシブUI**: モバイルファーストなTailwind CSSベースのデザイン
 - **セキュリティ**: LocalStorage使用時の適切な警告表示
 
