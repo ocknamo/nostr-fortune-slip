@@ -1,5 +1,5 @@
-import type { CoinosPaymentResponse, CoinosVerificationResult } from './coinos-types.js';
-import type { NostrEvent } from './nostr/types.js';
+import type { CoinosPaymentResponse, CoinosVerificationResult } from './types.js';
+import type { NostrEvent } from '../nostr/types.js';
 
 const COINOS_API_BASE_URL = 'https://coinos.io/api';
 

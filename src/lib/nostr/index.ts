@@ -13,4 +13,7 @@ export { handleZapReceived, generateLuckyNumber, createFortuneMessage } from './
 // ユーティリティをエクスポート
 export { publishEvent } from './utils.js';
 
+// ランダム値生成をエクスポート
+export { generateRandomBase64 } from './random.js';
+
 export { RELAYS } from './relay.js';

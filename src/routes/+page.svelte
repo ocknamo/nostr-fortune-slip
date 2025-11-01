@@ -15,9 +15,11 @@ import {
   type ZapReceiptSubscription,
   type NostrEvent,
   generateLuckyNumber,
+  generateRandomBase64,
 } from '$lib/nostr';
 import { generateLightningQRCode, generateNostrQRCode } from '$lib/qrcode';
 import { nip57 } from 'nostr-tools';
+import { startCoinosPolling, type CoinosPollingSubscription } from '$lib/coinos';
 
 // UI状態
 let isLoading = false;
@@ -31,8 +33,10 @@ let randomNumber: number | null = null;
 
 // Zap検知用の状態
 let zapSubscription: ZapReceiptSubscription | null = null;
+let coinosPollingSubscription: CoinosPollingSubscription | null = null;
 let currentZapRequest: NostrEvent | null = null;
 let currentTargetEventId: string | null = null;
+let paymentId: string | null = null;
 
 // 設定データ
 let lightningAddress = '';
@@ -57,6 +61,9 @@ onDestroy(() => {
   if (zapSubscription) {
     zapSubscription.stop();
   }
+  if (coinosPollingSubscription) {
+    coinosPollingSubscription.stop();
+  }
 });
 
 function navigateToSettings() {
@@ -73,9 +80,14 @@ function stopZapMonitoring() {
     zapSubscription.stop();
     zapSubscription = null;
   }
+  if (coinosPollingSubscription) {
+    coinosPollingSubscription.stop();
+    coinosPollingSubscription = null;
+  }
   isWaitingForZap = false;
   currentZapRequest = null;
   currentTargetEventId = null;
+  paymentId = null;
 }
 
 async function onZapDetected(zapReceipt: NostrEvent) {
@@ -134,6 +146,52 @@ function onZapError(error: string) {
   stopZapMonitoring();
 }
 
+async function onCoinosPaymentDetected(payment: any) {
+  console.log('[Fortune Slip] Coinos payment detected!', payment);
+
+  // QRコードを非表示
+  qrCodeDataUrl = '';
+  neventQrCodeDataUrl = '';
+  // 番号生成
+  randomNumber = generateLuckyNumber(1, 20);
+  // 状態を更新
+  zapDetected = true;
+  isWaitingForZap = false;
+
+  try {
+    // フォーチュン機能を実行（メンション付きkind1イベントを送信）
+    // coinosポーリングの場合はzapReceiptがないため、nullを渡す
+    if (currentTargetEventId && nostrPrivateKey) {
+      const privateKeyBytes = decodeNsec(nostrPrivateKey);
+      const fortuneMessage = `Fortune Number: ${randomNumber}`;
+      const event = createTextEvent(privateKeyBytes, fortuneMessage);
+
+      // eventにリプライタグを追加
+      event.tags.push(['e', currentTargetEventId, '', 'reply']);
+
+      await publishEvent(event);
+
+      console.log('[Fortune Slip] Fortune message sent successfully via Coinos polling!');
+      successMessage = '支払いを検知しました！フォーチュンメッセージを送信しました🎉';
+    } else {
+      successMessage = '支払いを検知しました！';
+    }
+
+    // サブスクリプション停止
+    stopZapMonitoring();
+  } catch (error) {
+    console.error('[Fortune Slip] Error handling coinos payment:', error);
+
+    // エラーが発生してもUI上では成功として表示
+    randomNumber = Math.floor(Math.random() * 100) + 1;
+    zapDetected = true;
+    isWaitingForZap = false;
+    stopZapMonitoring();
+
+    successMessage = '支払いを検知しました！';
+  }
+}
+
 function resetFortuneSlip() {
   qrCodeDataUrl = '';
   neventQrCodeDataUrl = '';
@@ -177,12 +235,17 @@ async function generateQRCode() {
 
     console.debug('[zap endpoint]', zapUrl);
 
-    // 5. Zapリクエストを作成
+    // 5. ランダムな8byte値を生成
+    const randomValue = generateRandomBase64();
+    paymentId = randomValue;
+    console.log('[Fortune Slip] Generated payment ID:', randomValue);
+
+    // 6. Zapリクエストを作成（ランダム値をcommentに埋め込む）
     const zapRequest = createZapRequest(
       privateKeyBytes,
       textEvent, // 完全なeventオブジェクト
       1000, // 1 sat = 1000 millisats
-      '', // コメント
+      randomValue, // ランダム値をコメントに埋め込む
     );
 
     // 6. Zapインボイスを取得
@@ -210,6 +273,18 @@ async function generateQRCode() {
       coinosApiToken, // Coinos API Token（オプション）
       onZapError, // エラーコールバック
     );
+
+    // 10. Coinos APIポーリングを開始（トークンが設定されている場合のフォールバック）
+    if (coinosApiToken && coinosApiToken.trim()) {
+      console.log('[Fortune Slip] Starting Coinos polling as fallback');
+      coinosPollingSubscription = startCoinosPolling(
+        randomValue,
+        coinosApiToken,
+        onCoinosPaymentDetected,
+        10000, // 10秒間隔
+        300000, // 5分タイムアウト
+      );
+    }
 
     isWaitingForZap = true;
   } catch (error) {

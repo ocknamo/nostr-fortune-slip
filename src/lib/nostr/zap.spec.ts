@@ -18,11 +18,11 @@ vi.mock('nostr-tools', () => ({
 }));
 
 // Mock coinos module
-vi.mock('../coinos.js', () => ({
+vi.mock('../coinos/index.js', () => ({
   verifyCoinosPayment: vi.fn(),
 }));
 
-import { verifyCoinosPayment } from '../coinos.js';
+import { verifyCoinosPayment } from '../coinos/index.js';
 const mockVerifyCoinosPayment = vi.mocked(verifyCoinosPayment);
 
 describe('getZapInvoiceFromEndpoint', () => {
