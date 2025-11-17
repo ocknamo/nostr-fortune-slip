@@ -25,7 +25,7 @@ onMount(() => {
     const storedPin = localStorage.getItem('settingsPin') || '1122'; // デフォルトPIN
     const inputPin = prompt('設定画面にアクセスするには4桁のPINを入力してください:');
 
-    if(inputPin === null) {
+    if (inputPin === null) {
       goto(base || '/');
       return;
     }
