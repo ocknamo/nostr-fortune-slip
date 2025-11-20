@@ -30,6 +30,7 @@ export async function publishEvent(event: NostrEvent): Promise<void> {
         .filter((result) => result.status === 'rejected')
         .map((result) => result.reason?.message || 'Unknown error');
       console.error('All relays failed:', errors);
+      console.info('Failed event:', event);
       throw new Error(`Failed to publish to any relay. Errors: ${errors.join(', ')}`);
     }
 

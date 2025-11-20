@@ -122,8 +122,11 @@ async function onZapDetected(zapReceipt: NostrEvent) {
   } catch (error) {
     console.error('[Fortune Slip] Error handling zap:', error);
 
-    // エラーが発生してもUI上では成功として表示
-    randomNumber = Math.floor(Math.random() * 100) + 1;
+    // すでに成功している場合はrandomNumberに値が存在するのでそれを使用する
+    if (!randomNumber) {
+      // エラーが発生してもUI上では成功として表示
+      randomNumber = generateLuckyNumber(1, 20);
+    }
     zapDetected = true;
     isWaitingForZap = false;
     stopZapMonitoring();
@@ -183,8 +186,11 @@ async function onCoinosPaymentDetected(payment: any) {
   } catch (error) {
     console.error('[Fortune Slip] Error handling coinos payment:', error);
 
-    // エラーが発生してもUI上では成功として表示
-    randomNumber = Math.floor(Math.random() * 100) + 1;
+    // すでに成功している場合はrandomNumberに値が存在するのでそれを使用する
+    if (!randomNumber) {
+      // エラーが発生してもUI上では成功として表示
+      randomNumber = generateLuckyNumber(1, 20);
+    }
     zapDetected = true;
     isWaitingForZap = false;
     stopZapMonitoring();
