@@ -240,7 +240,7 @@ async function generateQRCode() {
     // 2. Nostr kind 1イベントを作成・送信
     const textEvent = createTextEvent(
       privateKeyBytes,
-      'Fortune Slip Request \n このnoteにzapするかLNのQRコードにzapしてください\n\nZap this note or zap the LN QR code.',
+      'Fortune Slip Request\n\nこのnoteにzapするかLNのQRコードにzapしてください\nZap this note or zap the LN QR code.',
     );
     try {
       await publishEvent(textEvent);
