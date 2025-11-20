@@ -92,7 +92,14 @@ function stopZapMonitoring() {
 }
 
 async function onZapDetected(zapReceipt: NostrEvent) {
+  if (zapDetected) {
+    return;
+  }
+
   console.log('[Fortune Slip] Zap detected!', zapReceipt);
+
+  // coinosへのポーリングを停止
+  coinosPollingSubscription?.stop();
 
   // QRコードを非表示
   qrCodeDataUrl = '';
@@ -151,7 +158,13 @@ function onZapError(error: string) {
 }
 
 async function onCoinosPaymentDetected(payment: any) {
+  if (zapDetected) {
+    return;
+  }
   console.log('[Fortune Slip] Coinos payment detected!', payment);
+
+  // zapの購読を停止
+  zapSubscription?.stop();
 
   // QRコードを非表示
   qrCodeDataUrl = '';
@@ -167,11 +180,11 @@ async function onCoinosPaymentDetected(payment: any) {
     // coinosポーリングの場合はzapReceiptがないため、nullを渡す
     if (currentTargetEventId && nostrPrivateKey) {
       const privateKeyBytes = decodeNsec(nostrPrivateKey);
-      const fortuneMessage = `Fortune Number: ${randomNumber}`;
-      const event = createTextEvent(privateKeyBytes, fortuneMessage);
+      const fortuneMessage = `Fortune Number is ${randomNumber}`;
 
       // eventにリプライタグを追加
-      event.tags.push(['e', currentTargetEventId, '', 'reply']);
+      const tags = [['e', currentTargetEventId, '', 'reply']];
+      const event = createTextEvent(privateKeyBytes, fortuneMessage, tags);
 
       await publishEvent(event);
 
@@ -185,7 +198,6 @@ async function onCoinosPaymentDetected(payment: any) {
     stopZapMonitoring();
   } catch (error) {
     console.error('[Fortune Slip] Error handling coinos payment:', error);
-
     // すでに成功している場合はrandomNumberに値が存在するのでそれを使用する
     if (!randomNumber) {
       // エラーが発生してもUI上では成功として表示
@@ -226,7 +238,7 @@ async function generateQRCode() {
     const privateKeyBytes = decodeNsec(nostrPrivateKey);
 
     // 2. Nostr kind 1イベントを作成・送信
-    const textEvent = createTextEvent(privateKeyBytes, 'Fortune Slip Request');
+    const textEvent = createTextEvent(privateKeyBytes, 'Fortune Slip Request \n このnoteにzapするかLNのQRコードにzapしてください');
     try {
       await publishEvent(textEvent);
       publishedToRelay = true;

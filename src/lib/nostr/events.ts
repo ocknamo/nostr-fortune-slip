@@ -1,4 +1,4 @@
-import { nip19, nip57, getPublicKey, finalizeEvent } from 'nostr-tools';
+import { nip19, nip57, getPublicKey, finalizeEvent, type EventTemplate } from 'nostr-tools';
 import type { NostrEvent, MetadataContent } from './types.js';
 import { RELAYS } from './relay.js';
 
@@ -21,14 +21,13 @@ export function decodeNsec(nsec: string): Uint8Array {
 /**
  * Nostr kind 1イベントを作成
  */
-export function createTextEvent(privateKeyHex: Uint8Array, content: string): NostrEvent {
+export function createTextEvent(privateKeyHex: Uint8Array, content: string, tags: string[][] = []): NostrEvent {
   const publicKey = getPublicKey(privateKeyHex);
 
-  const event = {
+  const event: EventTemplate = {
     kind: 1,
-    pubkey: publicKey,
     created_at: Math.floor(Date.now() / 1000),
-    tags: [],
+    tags,
     content: content,
   };
 
