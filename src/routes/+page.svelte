@@ -16,6 +16,7 @@ import {
   type NostrEvent,
   generateLuckyNumber,
   generateRandomBase64,
+  getTargetEventMessage,
 } from '$lib/nostr';
 import { generateLightningQRCode, generateNostrQRCode } from '$lib/qrcode';
 import { nip57 } from 'nostr-tools';
@@ -115,9 +116,17 @@ async function onZapDetected(zapReceipt: NostrEvent) {
   isWaitingForZap = false;
 
   try {
+    // FIXME: イベント用のハードコード
+    const tagString = 'nostrasia2025';
     // フォーチュン機能を実行（メンション付きkind1イベントを送信）
     if (currentTargetEventId && nostrPrivateKey) {
-      const fortuneResult = await handleZapReceived(zapReceipt, currentTargetEventId, nostrPrivateKey, randomNumber);
+      const fortuneResult = await handleZapReceived(
+        zapReceipt,
+        currentTargetEventId,
+        nostrPrivateKey,
+        randomNumber,
+        tagString,
+      );
 
       if (fortuneResult) {
         console.log('[Fortune Slip] Fortune message sent successfully!');
@@ -242,10 +251,7 @@ async function generateQRCode() {
     const privateKeyBytes = decodeNsec(nostrPrivateKey);
 
     // 2. Nostr kind 1イベントを作成・送信
-    const textEvent = createTextEvent(
-      privateKeyBytes,
-      'Fortune Slip Request\n\nこのnoteにzapするかLNのQRコードにzapしてください\nZap this note or zap the LN QR code.',
-    );
+    const textEvent = createTextEvent(privateKeyBytes, getTargetEventMessage());
     try {
       await publishEvent(textEvent);
       publishedToRelay = true;

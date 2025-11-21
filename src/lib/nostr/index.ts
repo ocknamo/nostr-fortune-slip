@@ -8,7 +8,7 @@ export { decodeNsec, createTextEvent, createZapRequest, createMetadataEvent, cre
 export { getZapInvoiceFromEndpoint, validateZapReceipt, subscribeToZapReceipts } from './zap.js';
 
 // Fortune機能をエクスポート
-export { handleZapReceived, generateLuckyNumber, createFortuneMessage } from './fortune.js';
+export { handleZapReceived, generateLuckyNumber } from './fortune.js';
 
 // ユーティリティをエクスポート
 export { publishEvent } from './utils.js';
@@ -17,3 +17,5 @@ export { publishEvent } from './utils.js';
 export { generateRandomBase64 } from './random.js';
 
 export { RELAYS } from './relay.js';
+
+export { getResultEventMessage, getTargetEventMessage } from './message-text.js';

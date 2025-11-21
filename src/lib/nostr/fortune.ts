@@ -1,7 +1,8 @@
-import { getPublicKey, finalizeEvent, nip19 } from 'nostr-tools';
+import { getPublicKey, finalizeEvent } from 'nostr-tools';
 import type { NostrEvent } from './types.js';
 import { decodeNsec } from './events.js';
 import { publishEvent } from './utils.js';
+import { getResultEventMessage } from './message-text.js';
 
 /**
  * ラッキーナンバーを生成（min-maxの範囲）
@@ -31,15 +32,6 @@ export function extractZapperPubkey(zapReceipt: NostrEvent): string | null {
 }
 
 /**
- * メンション付きのフォーチュンメッセージを作成
- */
-export function createFortuneMessage(zapperPubkey: string, luckyNumber: number): string {
-  const npub = nip19.npubEncode(zapperPubkey);
-  const mention = `nostr:${npub}`;
-  return `おみくじのラッキーナンバーは ${luckyNumber} です✨\n\n素敵な一日をお過ごしください! ${mention} `;
-}
-
-/**
  * メンション付きkind1イベントを作成
  */
 export function createMentionEvent(
@@ -47,8 +39,9 @@ export function createMentionEvent(
   zapperPubkey: string,
   originalEventId: string,
   luckyNumber: number,
+  tagString: string,
 ): NostrEvent {
-  const content = createFortuneMessage(zapperPubkey, luckyNumber);
+  const content = getResultEventMessage(zapperPubkey, luckyNumber, tagString);
   const publicKey = getPublicKey(privateKeyHex);
 
   const event = {
@@ -58,6 +51,7 @@ export function createMentionEvent(
     tags: [
       ['p', zapperPubkey], // メンション対象
       ['e', originalEventId, '', 'reply'], // 元のイベントへのリプライ
+      ['t', tagString], // ハッシュタグ
     ],
     content: content,
   };
@@ -74,6 +68,7 @@ export async function handleZapReceived(
   originalEventId: string,
   privateKeyNsec: string,
   luckyNumber: number,
+  tagString: string = 'omikuji',
 ): Promise<boolean> {
   try {
     // Zapした人の公開鍵を取得
@@ -89,7 +84,7 @@ export async function handleZapReceived(
     const privateKeyHex = decodeNsec(privateKeyNsec);
 
     // メンション付きイベントを作成
-    const mentionEvent = createMentionEvent(privateKeyHex, zapperPubkey, originalEventId, luckyNumber);
+    const mentionEvent = createMentionEvent(privateKeyHex, zapperPubkey, originalEventId, luckyNumber, tagString);
 
     // イベントを送信
     await publishEvent(mentionEvent);

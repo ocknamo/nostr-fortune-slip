@@ -1,11 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import {
-  generateLuckyNumber,
-  extractZapperPubkey,
-  createFortuneMessage,
-  createMentionEvent,
-  handleZapReceived,
-} from './fortune.js';
+import { generateLuckyNumber, extractZapperPubkey, createMentionEvent, handleZapReceived } from './fortune.js';
 import type { NostrEvent } from './types.js';
 
 // Mock nostr-tools
@@ -28,7 +22,7 @@ vi.mock('./utils.js', () => ({
   publishEvent: vi.fn(),
 }));
 
-import { SimplePool, getPublicKey, finalizeEvent, nip19 } from 'nostr-tools';
+import { getPublicKey, finalizeEvent, nip19 } from 'nostr-tools';
 import { decodeNsec } from './events.js';
 import { publishEvent } from './utils.js';
 
@@ -94,33 +88,6 @@ describe('extractZapperPubkey', () => {
   });
 });
 
-describe('createFortuneMessage', () => {
-  beforeEach(() => {
-    vi.mocked(nip19.npubEncode).mockReturnValue('npub1testencoded');
-  });
-
-  it('should create correctly formatted message', () => {
-    const zapperPubkey = 'test-pubkey';
-    const luckyNumber = 42;
-
-    const message = createFortuneMessage(zapperPubkey, luckyNumber);
-
-    expect(nip19.npubEncode).toHaveBeenCalledWith(zapperPubkey);
-    expect(message).toContain('nostr:npub1testencoded');
-    expect(message).toContain(`ラッキーナンバーは ${luckyNumber} です`);
-  });
-
-  it('should handle different lucky numbers', () => {
-    const zapperPubkey = 'test-pubkey';
-
-    const message1 = createFortuneMessage(zapperPubkey, 1);
-    const message100 = createFortuneMessage(zapperPubkey, 100);
-
-    expect(message1).toContain('ラッキーナンバーは 1 です');
-    expect(message100).toContain('ラッキーナンバーは 100 です');
-  });
-});
-
 describe('createMentionEvent', () => {
   beforeEach(() => {
     vi.mocked(getPublicKey).mockReturnValue('derived-public-key');
@@ -143,8 +110,9 @@ describe('createMentionEvent', () => {
     const zapperPubkey = 'zapper-pubkey';
     const originalEventId = 'original-event-id';
     const luckyNumber = 77;
+    const tagString = 'testtag';
 
-    const event = createMentionEvent(privateKeyHex, zapperPubkey, originalEventId, luckyNumber);
+    const event = createMentionEvent(privateKeyHex, zapperPubkey, originalEventId, luckyNumber, tagString);
 
     expect(getPublicKey).toHaveBeenCalledWith(privateKeyHex);
     expect(finalizeEvent).toHaveBeenCalledWith(
@@ -154,8 +122,9 @@ describe('createMentionEvent', () => {
         tags: [
           ['p', zapperPubkey],
           ['e', originalEventId, '', 'reply'],
+          ['t', tagString],
         ],
-        content: expect.stringContaining(`ラッキーナンバーは ${luckyNumber} です`),
+        content: expect.stringContaining(`Your omikuji number is “${luckyNumber}”!`),
       }),
       privateKeyHex,
     );
