@@ -270,16 +270,19 @@ async function generateQRCode() {
     paymentId = randomValue;
     console.log('[Fortune Slip] Generated payment ID:', randomValue);
 
+    // 1 sat = 1000 millisats
+    const satsAmount = 100 * 1000; // TODO: デフォルト値を設定できるようにする
+
     // 6. Zapリクエストを作成（ランダム値をcommentに埋め込む）
     const zapRequest = createZapRequest(
       privateKeyBytes,
       textEvent, // 完全なeventオブジェクト
-      1000, // 1 sat = 1000 millisats
+      satsAmount,
       randomValue, // ランダム値をコメントに埋め込む
     );
 
     // 6. Zapインボイスを取得
-    const invoice = await getZapInvoiceFromEndpoint(zapUrl, 1000, zapRequest);
+    const invoice = await getZapInvoiceFromEndpoint(zapUrl, satsAmount, zapRequest);
 
     // 7. QRコードを生成
     const qrCode = await generateLightningQRCode(invoice.pr);
