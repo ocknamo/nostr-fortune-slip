@@ -7,6 +7,7 @@ import { onMount } from 'svelte';
 let lightningAddress = '';
 let nostrPrivateKey = '';
 let coinosApiToken = '';
+let eventTag = ''; // イベントタグ
 let showApiToken = false;
 let showPin = false; // PIN表示切り替え
 let allowDirectNostrZap = true; // デフォルトtrue
@@ -42,6 +43,7 @@ onMount(() => {
     lightningAddress = localStorage.getItem('lightningAddress') || '';
     nostrPrivateKey = localStorage.getItem('nostrPrivateKey') || '';
     coinosApiToken = localStorage.getItem('coinosApiToken') || '';
+    eventTag = localStorage.getItem('eventTag') || 'nostrasia2025'; // デフォルト値
     pinCode = storedPin;
     const storedAllowDirectNostrZap = localStorage.getItem('allowDirectNostrZap');
     // デフォルトはtrue、明示的にfalseの場合のみfalse
@@ -85,6 +87,7 @@ function handleSave() {
     localStorage.setItem('lightningAddress', lightningAddress);
     localStorage.setItem('nostrPrivateKey', nostrPrivateKey);
     localStorage.setItem('coinosApiToken', coinosApiToken);
+    localStorage.setItem('eventTag', eventTag);
     localStorage.setItem('allowDirectNostrZap', allowDirectNostrZap.toString());
     localStorage.setItem('settingsPin', pinCode);
 
@@ -116,6 +119,7 @@ function handleClearData() {
     localStorage.removeItem('lightningAddress');
     localStorage.removeItem('nostrPrivateKey');
     localStorage.removeItem('coinosApiToken');
+    localStorage.removeItem('eventTag');
     localStorage.removeItem('allowDirectNostrZap');
     localStorage.removeItem('settingsPin');
     // 旧データも削除（後方互換性のため）
@@ -126,6 +130,7 @@ function handleClearData() {
     lightningAddress = '';
     nostrPrivateKey = '';
     coinosApiToken = '';
+    eventTag = 'nostrasia2025'; // デフォルト値にリセット
     allowDirectNostrZap = true; // デフォルト値にリセット
     pinCode = '1128'; // デフォルトPINにリセット
 
@@ -318,6 +323,21 @@ function handleClearData() {
           {#if errors.coinosApiToken}
             <p class="mt-1 text-sm text-red-600">{errors.coinosApiToken}</p>
           {/if}
+        </div>
+
+        <!-- イベントタグ -->
+        <div>
+          <label for="event-tag" class="block text-sm font-medium text-gray-700 mb-2">
+            イベントタグ
+          </label>
+          <input
+            id="event-tag"
+            type="text"
+            bind:value={eventTag}
+            placeholder="nostrasia2025"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+          <p class="mt-1 text-sm text-gray-500">フォーチュンメッセージに含めるイベントタグ(ハッシュタグ)</p>
         </div>
 
         <!-- Nostrへの直接のzapを許可 -->

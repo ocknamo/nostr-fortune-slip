@@ -48,6 +48,7 @@ let paymentId: string | null = null;
 let lightningAddress = '';
 let nostrPrivateKey = '';
 let coinosApiToken = '';
+let eventTag = ''; // イベントタグ
 let allowDirectNostrZap = true; // デフォルトtrue
 
 // 設定データを読み込み
@@ -56,6 +57,7 @@ onMount(() => {
     lightningAddress = localStorage.getItem('lightningAddress') || '';
     nostrPrivateKey = localStorage.getItem('nostrPrivateKey') || '';
     coinosApiToken = localStorage.getItem('coinosApiToken') || '';
+    eventTag = localStorage.getItem('eventTag') || 'nostrasia2025'; // デフォルト値
     const storedAllowDirectNostrZap = localStorage.getItem('allowDirectNostrZap');
     // デフォルトはtrue、明示的にfalseの場合のみfalse
     allowDirectNostrZap = storedAllowDirectNostrZap === null ? true : storedAllowDirectNostrZap === 'true';
@@ -116,8 +118,6 @@ async function onZapDetected(zapReceipt: NostrEvent) {
   isWaitingForZap = false;
 
   try {
-    // FIXME: イベント用のハードコード
-    const tagString = 'nostrasia2025';
     // フォーチュン機能を実行（メンション付きkind1イベントを送信）
     if (currentTargetEventId && nostrPrivateKey) {
       const fortuneResult = await handleZapReceived(
@@ -125,7 +125,7 @@ async function onZapDetected(zapReceipt: NostrEvent) {
         currentTargetEventId,
         nostrPrivateKey,
         randomNumber,
-        tagString,
+        eventTag,
       );
 
       if (fortuneResult) {
