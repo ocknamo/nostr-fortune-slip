@@ -135,10 +135,8 @@ async function onZapDetected(zapReceipt: NostrEvent) {
 
       if (fortuneResult) {
         console.log('[Fortune Slip] Fortune message sent successfully!');
-        successMessage = 'Zapを受信しました！フォーチュンメッセージを送信しました🎉';
       } else {
         console.warn('[Fortune Slip] Failed to send fortune message');
-        successMessage = 'Zapを受信しました！';
       }
     }
 
@@ -348,7 +346,7 @@ function showSubmit() {
 }
 </script>
 
-<div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 bg-cover bg-center relative" style="background-image: url('{backgroundImage}');">
+<div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 bg-cover bg-center relative flex flex-col" style="background-image: url('{backgroundImage}');">
   <!-- 設定アイコン - 右上に配置 -->
   <button 
     on:click={navigateToSettings}
@@ -358,13 +356,10 @@ function showSubmit() {
     <img src={settingsIcon} alt="設定" class="w-10 h-10" />
   </button>
 
-  <div class="max-w-md mx-auto">
+  <div class="max-w-md mx-auto grow flex items-center">
     <div class="text-center">
-      <h1 class="text-3xl font-bold text-gray-900 mb-8">
-        Nostr Fortune Slip
-      </h1>
-      
-      <div class="bg-white shadow rounded-lg p-6">
+      {#if !showSubmit()}
+      <div class="bg-white shadow rounded-lg p-6 min-w-100">
         <!-- エラーメッセージ -->
         {#if errorMessage}
           <div class="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded-md">
@@ -381,16 +376,9 @@ function showSubmit() {
 
         <!-- Zap待機中のステータス -->
         {#if isWaitingForZap}
-          <div class="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4">
-            <div class="flex items-center">
-              <svg class="animate-spin h-5 w-5 text-blue-600 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <span class="text-blue-800 font-medium">Zapの受信を待機中...</span>
-            </div>
-            <p class="text-sm text-blue-600 mt-2">
-              QRコードをスキャンして1 satを送金してください。支払いが確認されるとおみくじの番号が表示されます。
+          <div class="rounded-md p-3 mb-4">
+            <p class="text-sm mt-2">
+              Scan the QR code and send 100 sats
             </p>
           </div>
         {/if}
@@ -469,41 +457,35 @@ function showSubmit() {
               </button>
             {/if}
           </div>
-        {:else if !isLoading}
-          <div class="mb-6">
-            <div class="text-center mb-4">
-              <div class="text-4xl mb-4">🎲</div>
-              <h3 class="text-lg font-medium text-gray-900 mb-2">Nostr Fortune Slip</h3>
-              <p class="text-gray-600 mb-4">
-                1 satでおみくじが引けます！<br/>
-                支払いが確認されると1-20のラッキーナンバーが表示されます。
-              </p>
-            </div>
-          </div>
         {/if}
 
-        <!-- QRコード生成ボタン -->
-         {#if showSubmit()}
-         <button
-         on:click={generateQRCode}
-          disabled={isLoading || isWaitingForZap}
-          class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 mb-4"
+        
+      </div>
+      {:else}
+      <!-- Fixed button container at the bottom -->
+      <div class="fixed bottom-0 left-0 right-0 px-4 pb-18 pt-2 z-10">
+        <div class="max-w-md mx-auto">
+          <!-- QRコード生成ボタン -->
+          <button
+            on:click={generateQRCode}
+            disabled={isLoading || isWaitingForZap}
+            class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-medium py-4 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-lg"
           >
-          {#if isLoading}
-            <div class="flex items-center justify-center">
-              <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              生成中...
-            </div>
+            {#if isLoading}
+              <div class="flex items-center justify-center">
+                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Generating...
+              </div>
             {:else}
-            QRコードを生成
+              Pray for 100 sats
             {/if}
           </button>
-          {/if}
-
+        </div>
       </div>
+        {/if}
     </div>
   </div>
 </div>
