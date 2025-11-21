@@ -21,7 +21,7 @@ import { generateLightningQRCode, generateNostrQRCode } from '$lib/qrcode';
 import { nip57 } from 'nostr-tools';
 import { startCoinosPolling, type CoinosPollingSubscription } from '$lib/coinos';
 
-import bg from '$lib/assets/background.svg';
+import bg from '$lib/assets/background.png';
 
 let backgroundImage = bg;
 
