@@ -3,6 +3,8 @@ import { goto } from '$app/navigation';
 import { base } from '$app/paths';
 import { onMount, onDestroy } from 'svelte';
 import settingsIcon from '$lib/assets/settings.svg';
+import nostrIcon from '$lib/assets/nostr-icon.svg';
+import lightningIcon from '$lib/assets/lightning-icon.svg';
 import {
   decodeNsec,
   createTextEvent,
@@ -371,17 +373,19 @@ function showSubmit() {
           <div class="mb-6">
             <!-- Toggle buttons for QR code selection -->
             {#if neventQrCodeDataUrl && allowDirectNostrZap && publishedToRelay}
-              <div class="flex gap-2 mb-4">
+              <div class="flex mb-4 justify-center">
                 <button
                   on:click={() => selectedQRType = 'nostr'}
-                  class="flex-1 py-2 px-4 rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 {selectedQRType === 'nostr' ? 'bg-purple-600 text-white hover:bg-purple-700 focus:ring-purple-500' : 'bg-gray-200 text-gray-700 hover:bg-gray-300 focus:ring-gray-400'}"
+                  class="flex-1 py-2 px-4 font-medium transition-all focus:outline-none border-b-2 flex items-center justify-center max-w-25 {selectedQRType === 'nostr' ? 'text-red-600 border-red-600' : 'text-red-400 border-red-200 hover:text-red-500 hover:border-red-300'}"
                 >
+                  <img src={nostrIcon} alt="" class="w-5 h-5 {selectedQRType === 'nostr' ? 'opacity-100' : 'opacity-60'}" />
                   Nostr
                 </button>
                 <button
                   on:click={() => selectedQRType = 'lightning'}
-                  class="flex-1 py-2 px-4 rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 {selectedQRType === 'lightning' ? 'bg-yellow-600 text-white hover:bg-yellow-700 focus:ring-yellow-500' : 'bg-gray-200 text-gray-700 hover:bg-gray-300 focus:ring-gray-400'}"
+                  class="flex-1 py-2 font-medium transition-all focus:outline-none border-b-2 flex items-center justify-center max-w-25 {selectedQRType === 'lightning' ? 'text-red-600 border-red-600' : 'text-red-400 border-red-200 hover:text-red-500 hover:border-red-300'}"
                 >
+                  <img src={lightningIcon} alt="" class="w-5 h-5 {selectedQRType === 'lightning' ? 'opacity-100' : 'opacity-60'}" />
                   Lightning
                 </button>
               </div>
