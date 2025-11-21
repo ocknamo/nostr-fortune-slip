@@ -2,6 +2,7 @@
 import { goto } from '$app/navigation';
 import { base } from '$app/paths';
 import { onMount, onDestroy } from 'svelte';
+import settingsIcon from '$lib/assets/settings.svg';
 import {
   decodeNsec,
   createTextEvent,
@@ -347,7 +348,16 @@ function showSubmit() {
 }
 </script>
 
-<div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 bg-cover bg-center" style="background-image: url('{backgroundImage}');">
+<div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 bg-cover bg-center relative" style="background-image: url('{backgroundImage}');">
+  <!-- 設定アイコン - 右上に配置 -->
+  <button 
+    on:click={navigateToSettings}
+    class="absolute top-14 right-4 w-12 h-12 bg-opacity-70 rounded-full flex items-center justify-center hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 z-10"
+    aria-label="設定画面へ"
+  >
+    <img src={settingsIcon} alt="設定" class="w-10 h-10" />
+  </button>
+
   <div class="max-w-md mx-auto">
     <div class="text-center">
       <h1 class="text-3xl font-bold text-gray-900 mb-8">
@@ -493,13 +503,6 @@ function showSubmit() {
           </button>
           {/if}
 
-        <!-- 設定画面への遷移ボタン -->
-        <button
-          on:click={navigateToSettings}
-          class="w-full bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-        >
-          設定画面へ
-        </button>
       </div>
     </div>
   </div>
