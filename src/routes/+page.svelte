@@ -21,6 +21,10 @@ import { generateLightningQRCode, generateNostrQRCode } from '$lib/qrcode';
 import { nip57 } from 'nostr-tools';
 import { startCoinosPolling, type CoinosPollingSubscription } from '$lib/coinos';
 
+import bg from '$lib/assets/background.svg';
+
+let backgroundImage = bg;
+
 // UI状態
 let isLoading = false;
 let qrCodeDataUrl = '';
@@ -333,7 +337,7 @@ function showSubmit() {
 }
 </script>
 
-<div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+<div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 bg-cover bg-center" style="background-image: url('{backgroundImage}');">
   <div class="max-w-md mx-auto">
     <div class="text-center">
       <h1 class="text-3xl font-bold text-gray-900 mb-8">
