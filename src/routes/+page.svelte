@@ -26,6 +26,9 @@ import bg from '$lib/assets/background.png';
 
 let backgroundImage = bg;
 
+// QR code display type enum
+type QRCodeDisplayType = 'nostr' | 'lightning';
+
 // UI状態
 let isLoading = false;
 let qrCodeDataUrl = '';
@@ -36,6 +39,7 @@ let isWaitingForZap = false;
 let zapDetected = false;
 let randomNumber: number | null = null;
 let publishedToRelay = false;
+let selectedQRType: QRCodeDisplayType = 'nostr';
 
 // Zap検知用の状態
 let zapSubscription: ZapReceiptSubscription | null = null;
@@ -403,28 +407,47 @@ function showSubmit() {
           </div>
         {:else if qrCodeDataUrl}
           <div class="mb-6">
+            <!-- Toggle buttons for QR code selection -->
+            {#if neventQrCodeDataUrl && allowDirectNostrZap && publishedToRelay}
+              <div class="flex gap-2 mb-4">
+                <button
+                  on:click={() => selectedQRType = 'nostr'}
+                  class="flex-1 py-2 px-4 rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 {selectedQRType === 'nostr' ? 'bg-purple-600 text-white hover:bg-purple-700 focus:ring-purple-500' : 'bg-gray-200 text-gray-700 hover:bg-gray-300 focus:ring-gray-400'}"
+                >
+                  Nostr
+                </button>
+                <button
+                  on:click={() => selectedQRType = 'lightning'}
+                  class="flex-1 py-2 px-4 rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 {selectedQRType === 'lightning' ? 'bg-yellow-600 text-white hover:bg-yellow-700 focus:ring-yellow-500' : 'bg-gray-200 text-gray-700 hover:bg-gray-300 focus:ring-gray-400'}"
+                >
+                  Lightning
+                </button>
+              </div>
+            {/if}
+
             <!-- Nostr Event QR Code (設定で許可され、リレーにパブリッシュ成功時のみ表示) -->
             {#if neventQrCodeDataUrl && allowDirectNostrZap && publishedToRelay}
-              <div class="mb-4">
+              <div class="mb-4" style="display: {selectedQRType === 'nostr' ? 'block' : 'none'};">
                 <h4 class="text-sm font-medium text-gray-700 mb-2 text-center">Zap to Nostr Event</h4>
                 <div class="flex justify-center mb-2">
                   <img src={neventQrCodeDataUrl} alt="Nostr Event QR Code" class="max-w-full h-auto rounded-lg shadow-sm" style="max-width: 200px;" />
                 </div>
+                <p class="text-sm text-gray-600 text-center">
+                  このQRコードはNostr Zap用です。
+                </p>
               </div>
-              <p class="mb-4">OR</p>
             {/if}
 
             <!-- Lightning Invoice QR Code -->
-            <div class="mb-4">
+            <div class="mb-4" style="display: {(neventQrCodeDataUrl && allowDirectNostrZap && publishedToRelay) ? (selectedQRType === 'lightning' ? 'block' : 'none') : 'block'};">
               <h4 class="text-sm font-medium text-gray-700 mb-2 text-center">Lightning Invoice (1 sat)</h4>
               <div class="flex justify-center mb-2">
                 <img src={qrCodeDataUrl} alt="Lightning Invoice QR Code" class="max-w-full h-auto rounded-lg shadow-sm" style="max-width: 200px;" />
               </div>
+              <p class="text-sm text-gray-600 text-center">
+                このQRコードは1 satのLightning支払い用です。
+              </p>
             </div>
-            
-            <p class="text-sm text-gray-600 text-center">
-              このQRコードは1 satのLightning支払い用です。
-            </p>
             
             <!-- キャンセルボタン -->
             {#if isWaitingForZap}
