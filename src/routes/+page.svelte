@@ -5,6 +5,7 @@ import { onMount, onDestroy } from 'svelte';
 import settingsIcon from '$lib/assets/settings.svg';
 import nostrIcon from '$lib/assets/nostr-icon.svg';
 import lightningIcon from '$lib/assets/lightning-icon.svg';
+import OmikujiAnimation from '$lib/components/OmikujiAnimation.svelte';
 import {
   decodeNsec,
   createTextEvent,
@@ -42,6 +43,7 @@ let zapDetected = false;
 let randomNumber: number | null = null;
 let publishedToRelay = false;
 let selectedQRType: QRCodeDisplayType = 'nostr';
+let isAnimationPlaying = false;
 
 // Zap検知用の状態
 let zapSubscription: ZapReceiptSubscription | null = null;
@@ -118,8 +120,9 @@ async function onZapDetected(zapReceipt: NostrEvent) {
   neventQrCodeDataUrl = '';
   // 番号生成
   randomNumber = generateLuckyNumber(1, 20);
-  // 状態を更新
-  zapDetected = true;
+  // アニメーション表示を開始
+  isAnimationPlaying = true;
+  // 待機状態を終了
   isWaitingForZap = false;
 
   try {
@@ -150,7 +153,7 @@ async function onZapDetected(zapReceipt: NostrEvent) {
       // エラーが発生してもUI上では成功として表示
       randomNumber = generateLuckyNumber(1, 20);
     }
-    zapDetected = true;
+    isAnimationPlaying = true;
     isWaitingForZap = false;
     stopZapMonitoring();
   }
@@ -185,8 +188,9 @@ async function onCoinosPaymentDetected(payment: any) {
   neventQrCodeDataUrl = '';
   // 番号生成
   randomNumber = generateLuckyNumber(1, 20);
-  // 状態を更新
-  zapDetected = true;
+  // アニメーション表示を開始
+  isAnimationPlaying = true;
+  // 待機状態を終了
   isWaitingForZap = false;
 
   try {
@@ -214,7 +218,7 @@ async function onCoinosPaymentDetected(payment: any) {
       // エラーが発生してもUI上では成功として表示
       randomNumber = generateLuckyNumber(1, 20);
     }
-    zapDetected = true;
+    isAnimationPlaying = true;
     isWaitingForZap = false;
     stopZapMonitoring();
   }
@@ -226,6 +230,7 @@ function resetFortuneSlip() {
   zapDetected = false;
   randomNumber = null;
   isWaitingForZap = false;
+  isAnimationPlaying = false;
   stopZapMonitoring();
   clearMessages();
 }
@@ -335,7 +340,13 @@ async function generateQRCode() {
 }
 
 function showSubmit() {
-  return !qrCodeDataUrl && !neventQrCodeDataUrl && !isWaitingForZap && !zapDetected;
+  return !qrCodeDataUrl && !neventQrCodeDataUrl && !isWaitingForZap && !zapDetected && !isAnimationPlaying;
+}
+
+function handleAnimationComplete() {
+  // アニメーション完了後に番号表示に切り替え
+  isAnimationPlaying = false;
+  zapDetected = true;
 }
 </script>
 
@@ -351,7 +362,7 @@ function showSubmit() {
 
   <div class="max-w-md mx-auto grow flex items-center">
     <div class="text-center">
-      {#if !showSubmit() && !zapDetected}
+      {#if !showSubmit() && !zapDetected && !isAnimationPlaying}
       <div class="bg-white shadow rounded-lg p-6 min-w-100">
         <!-- エラーメッセージ -->
         {#if errorMessage}
@@ -447,8 +458,15 @@ function showSubmit() {
       </div>
       {/if}
 
+      <!-- アニメーション表示 -->
+      {#if isAnimationPlaying}
+      <div class="p-6 w-full max-w-md">
+        <OmikujiAnimation onComplete={handleAnimationComplete} />
+      </div>
+      {/if}
+
       <!-- Zap検知後のランダム数字表示 -->
-      {#if zapDetected}
+      {#if zapDetected && !isAnimationPlaying}
       <div class="mb-6 bg-white pl-4 pr-4 w-50">
         <div class="flex justify-center mb-4 border-b">
           <div class="h-36 flex items-center justify-center">
