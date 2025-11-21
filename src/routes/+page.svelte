@@ -35,7 +35,6 @@ let isLoading = false;
 let qrCodeDataUrl = '';
 let neventQrCodeDataUrl = '';
 let errorMessage = '';
-let successMessage = '';
 let isWaitingForZap = false;
 let zapDetected = false;
 let randomNumber: number | null = null;
@@ -85,7 +84,6 @@ function navigateToSettings() {
 
 function clearMessages() {
   errorMessage = '';
-  successMessage = '';
 }
 
 function stopZapMonitoring() {
@@ -153,8 +151,6 @@ async function onZapDetected(zapReceipt: NostrEvent) {
     zapDetected = true;
     isWaitingForZap = false;
     stopZapMonitoring();
-
-    successMessage = 'Zapを受信しました！';
   }
 }
 
@@ -205,9 +201,6 @@ async function onCoinosPaymentDetected(payment: any) {
       await publishEvent(event);
 
       console.log('[Fortune Slip] Fortune message sent successfully via Coinos polling!');
-      successMessage = '支払いを検知しました！フォーチュンメッセージを送信しました🎉';
-    } else {
-      successMessage = '支払いを検知しました！';
     }
 
     // サブスクリプション停止
@@ -222,8 +215,6 @@ async function onCoinosPaymentDetected(payment: any) {
     zapDetected = true;
     isWaitingForZap = false;
     stopZapMonitoring();
-
-    successMessage = '支払いを検知しました！';
   }
 }
 
@@ -358,7 +349,7 @@ function showSubmit() {
 
   <div class="max-w-md mx-auto grow flex items-center">
     <div class="text-center">
-      {#if !showSubmit()}
+      {#if !showSubmit() && !zapDetected}
       <div class="bg-white shadow rounded-lg p-6 min-w-100">
         <!-- エラーメッセージ -->
         {#if errorMessage}
@@ -367,43 +358,16 @@ function showSubmit() {
           </div>
         {/if}
 
-        <!-- 成功メッセージ -->
-        {#if successMessage}
-          <div class="mb-4 p-3 bg-green-100 border border-green-300 text-green-700 rounded-md">
-            {successMessage}
-          </div>
-        {/if}
-
         <!-- Zap待機中のステータス -->
         {#if isWaitingForZap}
           <div class="rounded-md p-3 mb-4">
-            <p class="text-sm mt-2">
+            <p class="text-m mt-2 font-bold">
               Scan the QR code and send 100 sats
             </p>
           </div>
         {/if}
 
-        <!-- Zap検知後のランダム数字表示 -->
-        {#if zapDetected && randomNumber}
-          <div class="mb-6">
-            <h3 class="text-2xl font-bold text-center text-green-600 mb-4">Fortune Number</h3>
-            <div class="flex justify-center mb-4">
-              <div class="bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-full w-24 h-24 flex items-center justify-center shadow-lg">
-                <span class="text-3xl font-bold text-white">{randomNumber}</span>
-              </div>
-            </div>
-            <p class="text-sm text-gray-600 text-center mb-4">
-              あなたのラッキーナンバーです！
-            </p>
-            <!-- もう一度ボタン -->
-            <button
-              on:click={resetFortuneSlip}
-              class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 mb-4"
-            >
-              もう一度おみくじを引く
-            </button>
-          </div>
-        {:else if qrCodeDataUrl}
+        {#if qrCodeDataUrl}
           <div class="mb-6">
             <!-- Toggle buttons for QR code selection -->
             {#if neventQrCodeDataUrl && allowDirectNostrZap && publishedToRelay}
@@ -426,34 +390,26 @@ function showSubmit() {
             <!-- Nostr Event QR Code (設定で許可され、リレーにパブリッシュ成功時のみ表示) -->
             {#if neventQrCodeDataUrl && allowDirectNostrZap && publishedToRelay}
               <div class="mb-4" style="display: {selectedQRType === 'nostr' ? 'block' : 'none'};">
-                <h4 class="text-sm font-medium text-gray-700 mb-2 text-center">Zap to Nostr Event</h4>
                 <div class="flex justify-center mb-2">
                   <img src={neventQrCodeDataUrl} alt="Nostr Event QR Code" class="max-w-full h-auto rounded-lg shadow-sm" style="max-width: 200px;" />
                 </div>
-                <p class="text-sm text-gray-600 text-center">
-                  このQRコードはNostr Zap用です。
-                </p>
               </div>
             {/if}
 
             <!-- Lightning Invoice QR Code -->
             <div class="mb-4" style="display: {(neventQrCodeDataUrl && allowDirectNostrZap && publishedToRelay) ? (selectedQRType === 'lightning' ? 'block' : 'none') : 'block'};">
-              <h4 class="text-sm font-medium text-gray-700 mb-2 text-center">Lightning Invoice (1 sat)</h4>
               <div class="flex justify-center mb-2">
                 <img src={qrCodeDataUrl} alt="Lightning Invoice QR Code" class="max-w-full h-auto rounded-lg shadow-sm" style="max-width: 200px;" />
               </div>
-              <p class="text-sm text-gray-600 text-center">
-                このQRコードは1 satのLightning支払い用です。
-              </p>
             </div>
             
             <!-- キャンセルボタン -->
             {#if isWaitingForZap}
               <button
                 on:click={resetFortuneSlip}
-                class="w-full bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 mt-4"
+                class="font-medium py-2 px-4 transition-colors mt-4 border rounded-full"
               >
-                キャンセル
+                Cancel
               </button>
             {/if}
           </div>
@@ -461,7 +417,7 @@ function showSubmit() {
 
         
       </div>
-      {:else}
+      {:else if !zapDetected}
       <!-- Fixed button container at the bottom -->
       <div class="fixed bottom-0 left-0 right-0 px-4 pb-18 pt-2 z-10">
         <div class="max-w-md mx-auto">
@@ -469,7 +425,7 @@ function showSubmit() {
           <button
             on:click={generateQRCode}
             disabled={isLoading || isWaitingForZap}
-            class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-medium py-4 px-4 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-lg"
+            class="h-20 w-80 bg-red-900 disabled:bg-amber-600 disabled:cursor-not-allowed text-white text-3xl font-medium py-4 px-4 transition-colors outline-1 pl-6 pr-6 rounded-full"
           >
             {#if isLoading}
               <div class="flex items-center justify-center">
@@ -485,7 +441,29 @@ function showSubmit() {
           </button>
         </div>
       </div>
-        {/if}
+      {/if}
+
+      <!-- Zap検知後のランダム数字表示 -->
+      {#if zapDetected}
+      <div class="mb-6 bg-white pl-4 pr-4 w-50">
+        <div class="flex justify-center mb-4 border-b">
+          <div class="h-36 flex items-center justify-center">
+            <span class="font-bold text-amber-700 text-7xl mb-4">{randomNumber}</span>
+          </div>
+        </div>
+        <h3 class="text-2xl font-bold">All done!</h3>
+        <p class="text-sm text-gray-600 text-center mb-4 mt-4 font-bold">
+          Please take your<br/> numbered omikuji.
+        </p>
+        <!-- もう一度ボタン -->
+        <button
+          on:click={resetFortuneSlip}
+          class="w-full py-2 px-4 mb-18 border text-sm rounded-2xl"
+        >
+          Try another omikuji
+        </button>
+      </div>
+    {/if}
     </div>
   </div>
 </div>
