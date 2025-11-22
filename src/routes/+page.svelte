@@ -116,6 +116,9 @@ async function onZapDetected(zapReceipt: NostrEvent) {
     return;
   }
 
+  // 早期にフラグを立てて二重実行を防ぐ
+  zapDetected = true;
+
   console.log('[Fortune Slip] Zap detected!', zapReceipt);
 
   // coinosへのポーリングを停止
@@ -184,6 +187,10 @@ async function onCoinosPaymentDetected(payment: any) {
   if (zapDetected) {
     return;
   }
+
+  // 早期にフラグを立てて二重実行を防ぐ
+  zapDetected = true;
+
   console.log('[Fortune Slip] Coinos payment detected!', payment);
 
   // zapの購読を停止
