@@ -52,6 +52,9 @@ let currentZapRequest: NostrEvent | null = null;
 let currentTargetEventId: string | null = null;
 let paymentId: string | null = null;
 
+// 自動リセット用タイマー
+let autoResetTimerId: number | null = null;
+
 // 設定データ
 let lightningAddress = '';
 let nostrPrivateKey = '';
@@ -79,6 +82,9 @@ onDestroy(() => {
   }
   if (coinosPollingSubscription) {
     coinosPollingSubscription.stop();
+  }
+  if (autoResetTimerId !== null) {
+    clearTimeout(autoResetTimerId);
   }
 });
 
@@ -225,6 +231,12 @@ async function onCoinosPaymentDetected(payment: any) {
 }
 
 function resetFortuneSlip() {
+  // 自動リセットタイマーをクリア
+  if (autoResetTimerId !== null) {
+    clearTimeout(autoResetTimerId);
+    autoResetTimerId = null;
+  }
+
   qrCodeDataUrl = '';
   neventQrCodeDataUrl = '';
   zapDetected = false;
@@ -351,6 +363,12 @@ function handleAnimationComplete() {
   // アニメーション完了後に番号表示に切り替え
   isAnimationPlaying = false;
   zapDetected = true;
+
+  // 20秒後に自動リセット
+  autoResetTimerId = window.setTimeout(() => {
+    console.log('[Fortune Slip] Auto-resetting after 20 seconds');
+    resetFortuneSlip();
+  }, 20000);
 }
 </script>
 
