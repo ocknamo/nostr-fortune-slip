@@ -231,6 +231,7 @@ function resetFortuneSlip() {
   randomNumber = null;
   isWaitingForZap = false;
   isAnimationPlaying = false;
+  selectedQRType = 'nostr'; // タブをNostrにリセット
   stopZapMonitoring();
   clearMessages();
 }
@@ -331,6 +332,9 @@ async function generateQRCode() {
     }
 
     isWaitingForZap = true;
+
+    // QRコード表示時にタブをNostrにリセット
+    selectedQRType = 'nostr';
   } catch (error) {
     console.error('QR code generation failed:', error);
     errorMessage = error instanceof Error ? error.message : 'QRコードの生成に失敗しました。';
