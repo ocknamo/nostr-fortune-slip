@@ -5,7 +5,9 @@ export function getTargetEventMessage(): string {
 Please zap this post or the LN QR code.
 
 参拝ありがとうございます！
-この投稿か、LN の QR コードに Zap してください。`;
+この投稿か、LN の QR コードに Zap してください。
+
+※会場で参拝してない人はこのポストにZapしないでね!`;
 }
 
 export function getResultEventMessage(
