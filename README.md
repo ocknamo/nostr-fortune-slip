@@ -4,12 +4,12 @@
 
 Nostr Fortune Slipは、NostrプロトコルとLightning Networkを統合したウェブアプリケーションです。Zapリクエスト対応のQRコード生成機能を提供します。
 
+[nostr-fortune-slip](https://ocknamo.github.io/nostr-fortune-slip/)
+
 ## 機能
 
-- **デュアルQRコード表示**: Lightning Invoice QRコードとNostr Event Link QRコード（`nostr:nevent1...`形式）を並列表示
 - **Lightning QRコード生成**: Zapリクエスト対応のLightning Invoice QRコードを生成
-- **Nostr Event QRコード**: 作成されたkind1イベントへの`nostr:nevent1`リンクをQRコード化
-- **Nostr統合**: kind 1イベントの作成・署名・送信、Zapリクエスト（kind 9734）の生成
+- **Nostr統合**: kind 1イベントの作成・署名、Zapリクエスト（kind 9734）の生成
 - **Payment ID追跡**: ランダムな8byte値（base64url形式）をZapコメントに埋め込み、支払い検証に使用
 - **Zap検知機能**: リアルタイムでZap Receiptを検知し、おみくじ結果を表示
 - **Coinos API検証**: Zapレシート受信後にCoinos APIで入金を追加検証（preimage照合）
