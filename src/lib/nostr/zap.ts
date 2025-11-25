@@ -43,12 +43,7 @@ export async function getZapInvoiceFromEndpoint(
  * Zap Receiptの妥当性を検証（同期版）
  * NIP-57 Appendix Fの仕様に基づく
  */
-export function validateZapReceipt(
-  zapReceipt: NostrEvent,
-  targetEventId: string,
-  zapRequest: NostrEvent,
-  allowDirectNostrZap = true,
-): boolean {
+export function validateZapReceipt(zapReceipt: NostrEvent, targetEventId: string, zapRequest: NostrEvent): boolean {
   try {
     // kind 9735であることを確認
     if (zapReceipt.kind !== 9735) {
@@ -73,18 +68,15 @@ export function validateZapReceipt(
     }
 
     // descriptionがzap requestと一致することを確認
-    // allowDirectNostrZapがfalseの場合のみ厳密に検証
-    if (!allowDirectNostrZap) {
-      try {
-        const description = JSON.parse(descriptionTag[1]);
-        if (description.id !== zapRequest.id) {
-          console.warn('Zap receipt description ID mismatch');
-          return false;
-        }
-      } catch (error) {
-        console.warn('Invalid zap receipt description JSON:', error);
+    try {
+      const description = JSON.parse(descriptionTag[1]);
+      if (description.id !== zapRequest.id) {
+        console.warn('Zap receipt description ID mismatch');
         return false;
       }
+    } catch (error) {
+      console.warn('Invalid zap receipt description JSON:', error);
+      return false;
     }
 
     return true;
@@ -102,12 +94,11 @@ export async function validateZapReceiptWithCoinos(
   zapReceipt: NostrEvent,
   targetEventId: string,
   zapRequest: NostrEvent,
-  allowDirectNostrZap = true,
   coinosApiToken?: string,
 ): Promise<{ valid: boolean; coinosVerified?: boolean; error?: string }> {
   try {
     // まず基本的なNostr検証を実行
-    const basicValid = validateZapReceipt(zapReceipt, targetEventId, zapRequest, allowDirectNostrZap);
+    const basicValid = validateZapReceipt(zapReceipt, targetEventId, zapRequest);
 
     if (!basicValid) {
       return {
@@ -163,7 +154,6 @@ export function subscribeToZapReceipts(
   zapRequest: NostrEvent,
   onZapReceived: (zapReceipt: NostrEvent) => void,
   timeoutMs: number = 300000, // 5分のタイムアウト
-  allowDirectNostrZap = true, // デフォルトtrue
   coinosApiToken?: string, // Coinos API Token（オプション）
   onZapError?: (error: string) => void, // エラーコールバック（オプション）
 ): ZapReceiptSubscription {
@@ -198,7 +188,6 @@ export function subscribeToZapReceipts(
             zapReceipt,
             targetEventId,
             zapRequest,
-            allowDirectNostrZap,
             coinosApiToken,
           );
 

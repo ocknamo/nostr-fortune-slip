@@ -22,8 +22,6 @@ export function decodeNsec(nsec: string): Uint8Array {
  * Nostr kind 1イベントを作成
  */
 export function createTextEvent(privateKeyHex: Uint8Array, content: string, tags: string[][] = []): NostrEvent {
-  const publicKey = getPublicKey(privateKeyHex);
-
   const event: EventTemplate = {
     kind: 1,
     created_at: Math.floor(Date.now() / 1000),
@@ -78,18 +76,4 @@ export function createMetadataEvent(pubkey: string, lud16?: string): NostrEvent 
   };
 
   return event as NostrEvent;
-}
-
-/**
- * NostrEventからnevent1形式のURIを生成
- */
-export function createNeventUri(event: NostrEvent): string {
-  const eventPointer = {
-    id: event.id,
-    relays: RELAYS,
-    author: event.pubkey,
-    kind: event.kind,
-  };
-
-  return nip19.neventEncode(eventPointer);
 }

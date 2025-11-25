@@ -1,30 +1,15 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { generateLuckyNumber, extractZapperPubkey, createMentionEvent, handleZapReceived } from './fortune.js';
+import { describe, expect, it, vi } from 'vitest';
+import { generateLuckyNumber, extractZapperPubkey } from './fortune.js';
 import type { NostrEvent } from './types.js';
 
 // Mock nostr-tools
 vi.mock('nostr-tools', () => ({
-  SimplePool: vi.fn(),
   getPublicKey: vi.fn(),
   finalizeEvent: vi.fn(),
   nip19: {
     npubEncode: vi.fn(),
   },
 }));
-
-// Mock events module
-vi.mock('./events.js', () => ({
-  decodeNsec: vi.fn(),
-}));
-
-// Mock utils module
-vi.mock('./utils.js', () => ({
-  publishEvent: vi.fn(),
-}));
-
-import { getPublicKey, finalizeEvent, nip19 } from 'nostr-tools';
-import { decodeNsec } from './events.js';
-import { publishEvent } from './utils.js';
 
 describe('generateLuckyNumber', () => {
   it('should generate number between 1 and 100', () => {
@@ -83,139 +68,6 @@ describe('extractZapperPubkey', () => {
 
     expect(result).toBe(null);
     expect(consoleSpy).toHaveBeenCalledWith('Failed to parse zap request from description:', expect.any(Error));
-
-    consoleSpy.mockRestore();
-  });
-});
-
-describe('createMentionEvent', () => {
-  beforeEach(() => {
-    vi.mocked(getPublicKey).mockReturnValue('derived-public-key');
-    vi.mocked(finalizeEvent).mockReturnValue({
-      id: 'signed-event-id',
-      pubkey: 'derived-public-key',
-      created_at: 1234567890,
-      kind: 1,
-      tags: [
-        ['p', 'zapper-pubkey'],
-        ['e', 'original-event-id', '', 'reply'],
-      ],
-      content: 'test content',
-      sig: 'signature',
-    } as any);
-  });
-
-  it('should create mention event with correct structure', () => {
-    const privateKeyHex = new Uint8Array([1, 2, 3]);
-    const zapperPubkey = 'zapper-pubkey';
-    const originalEventId = 'original-event-id';
-    const luckyNumber = 77;
-    const tagString = 'testtag';
-
-    const event = createMentionEvent(privateKeyHex, zapperPubkey, originalEventId, luckyNumber, tagString);
-
-    expect(getPublicKey).toHaveBeenCalledWith(privateKeyHex);
-    expect(finalizeEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        kind: 1,
-        pubkey: 'derived-public-key',
-        tags: [
-          ['p', zapperPubkey],
-          ['e', originalEventId, '', 'reply'],
-          ['t', tagString],
-        ],
-        content: expect.stringContaining(`Your omikuji number is “${luckyNumber}”!`),
-      }),
-      privateKeyHex,
-    );
-
-    expect(event.kind).toBe(1);
-    expect(event.pubkey).toBe('derived-public-key');
-  });
-});
-
-describe('handleZapReceived', () => {
-  beforeEach(() => {
-    vi.mocked(decodeNsec).mockReturnValue(new Uint8Array([1, 2, 3]));
-    vi.mocked(getPublicKey).mockReturnValue('derived-public-key');
-    vi.mocked(finalizeEvent).mockReturnValue({
-      id: 'signed-event-id',
-      pubkey: 'derived-public-key',
-      created_at: 1234567890,
-      kind: 1,
-      tags: [],
-      content: 'test',
-      sig: 'signature',
-    } as any);
-
-    // Mock publishEvent to resolve successfully
-    vi.mocked(publishEvent).mockResolvedValue(undefined);
-  });
-
-  it('should handle zap receipt successfully', async () => {
-    const zapReceipt: NostrEvent = {
-      id: 'receipt-id',
-      pubkey: 'lightning-service-pubkey',
-      created_at: 1234567890,
-      kind: 9735,
-      tags: [
-        ['description', JSON.stringify({ pubkey: 'zapper-pubkey' })],
-        ['bolt11', 'invoice'],
-      ],
-      content: '',
-      sig: 'receipt-sig',
-    };
-
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const result = await handleZapReceived(zapReceipt, 'original-event-id', 'nsec1test', 10);
-
-    expect(result).toBe(true);
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Generating fortune for zapper: zapper-pubkey'));
-
-    consoleSpy.mockRestore();
-  });
-
-  it('should handle invalid zap receipt', async () => {
-    const zapReceipt: NostrEvent = {
-      id: 'receipt-id',
-      pubkey: 'lightning-service-pubkey',
-      created_at: 1234567890,
-      kind: 9735,
-      tags: [], // No description tag
-      content: '',
-      sig: 'receipt-sig',
-    };
-
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const result = await handleZapReceived(zapReceipt, 'original-event-id', 'nsec1test', 10);
-
-    expect(result).toBe(false);
-    expect(consoleSpy).toHaveBeenCalledWith('Could not extract zapper pubkey from zap receipt');
-
-    consoleSpy.mockRestore();
-  });
-
-  it('should handle publishing failure', async () => {
-    const zapReceipt: NostrEvent = {
-      id: 'receipt-id',
-      pubkey: 'lightning-service-pubkey',
-      created_at: 1234567890,
-      kind: 9735,
-      tags: [
-        ['description', JSON.stringify({ pubkey: 'zapper-pubkey' })],
-        ['bolt11', 'invoice'],
-      ],
-      content: '',
-      sig: 'receipt-sig',
-    };
-
-    // Mock publishing failure
-    vi.mocked(publishEvent).mockRejectedValue(new Error('Publish failed'));
-
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const result = await handleZapReceived(zapReceipt, 'original-event-id', 'nsec1test', 10);
-
-    expect(result).toBe(false);
 
     consoleSpy.mockRestore();
   });

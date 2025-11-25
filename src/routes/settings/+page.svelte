@@ -12,7 +12,6 @@ let coinosApiToken = '';
 let eventTag = ''; // イベントタグ
 let showApiToken = false;
 let showPin = false; // PIN表示切り替え
-let allowDirectNostrZap = true; // デフォルトtrue
 let pinCode = ''; // PIN設定用
 
 // UI状態
@@ -47,9 +46,6 @@ onMount(() => {
     coinosApiToken = localStorage.getItem('coinosApiToken') || '';
     eventTag = localStorage.getItem('eventTag') || 'nostrasia2025'; // デフォルト値
     pinCode = storedPin;
-    const storedAllowDirectNostrZap = localStorage.getItem('allowDirectNostrZap');
-    // デフォルトはtrue、明示的にfalseの場合のみfalse
-    allowDirectNostrZap = storedAllowDirectNostrZap === null ? true : storedAllowDirectNostrZap === 'true';
   }
 });
 
@@ -90,7 +86,6 @@ function handleSave() {
     localStorage.setItem('nostrPrivateKey', nostrPrivateKey);
     localStorage.setItem('coinosApiToken', coinosApiToken);
     localStorage.setItem('eventTag', eventTag);
-    localStorage.setItem('allowDirectNostrZap', allowDirectNostrZap.toString());
     localStorage.setItem('settingsPin', pinCode);
 
     showSuccessMessage = true;
@@ -122,7 +117,6 @@ function handleClearData() {
     localStorage.removeItem('nostrPrivateKey');
     localStorage.removeItem('coinosApiToken');
     localStorage.removeItem('eventTag');
-    localStorage.removeItem('allowDirectNostrZap');
     localStorage.removeItem('settingsPin');
     // 旧データも削除（後方互換性のため）
     localStorage.removeItem('coinosId');
@@ -133,7 +127,6 @@ function handleClearData() {
     nostrPrivateKey = '';
     coinosApiToken = '';
     eventTag = 'nostrasia2025'; // デフォルト値にリセット
-    allowDirectNostrZap = true; // デフォルト値にリセット
     pinCode = '1128'; // デフォルトPINにリセット
 
     showDeleteMessage = true;
@@ -340,28 +333,6 @@ function handleClearData() {
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
           <p class="mt-1 text-sm text-gray-500">フォーチュンメッセージに含めるイベントタグ(ハッシュタグ)</p>
-        </div>
-
-        <!-- Nostrへの直接のzapを許可 -->
-        <div class="border-t border-gray-200 pt-6">
-          <div class="flex items-start">
-            <div class="flex items-center h-5">
-              <input
-                id="allow-direct-nostr-zap"
-                type="checkbox"
-                bind:checked={allowDirectNostrZap}
-                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-            </div>
-            <div class="ml-3 text-sm">
-              <label for="allow-direct-nostr-zap" class="font-medium text-gray-700">
-                Nostrへの直接のzapを許可
-              </label>
-              <p class="text-gray-500 mt-1">
-                有効にすると、Nostrイベントへの直接zap用のQRコードも表示されます。無効にすると、Lightningインボイスのみが表示され、より厳密なzap検証が行われます。
-              </p>
-            </div>
-          </div>
         </div>
 
         <!-- 保存ボタン -->

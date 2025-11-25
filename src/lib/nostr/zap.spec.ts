@@ -212,34 +212,23 @@ describe('validateZapReceipt', () => {
     consoleSpy.mockRestore();
   });
 
-  it('should validate zap receipt when allowDirectNostrZap is true (default)', () => {
-    const targetEventId = 'target-event-id';
-    const zapRequest = createMockZapRequest('zap-request-id');
-    // description内のIDが異なる場合でもtrueを返すべき
-    const zapReceipt = createMockZapReceipt(targetEventId, 'different-zap-request-id');
-
-    const result = validateZapReceipt(zapReceipt, targetEventId, zapRequest, true);
-
-    expect(result).toBe(true);
-  });
-
-  it('should validate description when allowDirectNostrZap is false', () => {
+  it('should validate description', () => {
     const targetEventId = 'target-event-id';
     const zapRequest = createMockZapRequest('zap-request-id');
     const zapReceipt = createMockZapReceipt(targetEventId, zapRequest.id);
 
-    const result = validateZapReceipt(zapReceipt, targetEventId, zapRequest, false);
+    const result = validateZapReceipt(zapReceipt, targetEventId, zapRequest);
 
     expect(result).toBe(true);
   });
 
-  it('should reject mismatched description ID when allowDirectNostrZap is false', () => {
+  it('should reject mismatched description ID', () => {
     const targetEventId = 'target-event-id';
     const zapRequest = createMockZapRequest('zap-request-id');
     const zapReceipt = createMockZapReceipt(targetEventId, 'different-zap-request-id');
 
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const result = validateZapReceipt(zapReceipt, targetEventId, zapRequest, false);
+    const result = validateZapReceipt(zapReceipt, targetEventId, zapRequest);
 
     expect(result).toBe(false);
     expect(consoleSpy).toHaveBeenCalledWith('Zap receipt description ID mismatch');
@@ -247,7 +236,7 @@ describe('validateZapReceipt', () => {
     consoleSpy.mockRestore();
   });
 
-  it('should reject invalid description JSON when allowDirectNostrZap is false', () => {
+  it('should reject invalid description JSON', () => {
     const targetEventId = 'target-event-id';
     const zapRequest = createMockZapRequest('zap-request-id');
     const zapReceipt = createMockZapReceipt(targetEventId, zapRequest.id);
@@ -255,7 +244,7 @@ describe('validateZapReceipt', () => {
     zapReceipt.tags = zapReceipt.tags.map((tag) => (tag[0] === 'description' ? ['description', 'invalid json'] : tag));
 
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const result = validateZapReceipt(zapReceipt, targetEventId, zapRequest, false);
+    const result = validateZapReceipt(zapReceipt, targetEventId, zapRequest);
 
     expect(result).toBe(false);
     expect(consoleSpy).toHaveBeenCalledWith('Invalid zap receipt description JSON:', expect.any(Error));
@@ -323,7 +312,7 @@ describe('validateZapReceiptWithCoinos', () => {
       },
     });
 
-    const result = await validateZapReceiptWithCoinos(zapReceipt, targetEventId, zapRequest, true, 'test-api-token');
+    const result = await validateZapReceiptWithCoinos(zapReceipt, targetEventId, zapRequest, 'test-api-token');
 
     expect(result.valid).toBe(true);
     expect(result.coinosVerified).toBe(true);
@@ -339,7 +328,6 @@ describe('validateZapReceiptWithCoinos', () => {
       zapReceipt,
       targetEventId,
       zapRequest,
-      true,
       undefined, // No API token
     );
 
@@ -357,7 +345,6 @@ describe('validateZapReceiptWithCoinos', () => {
       zapReceipt,
       targetEventId,
       zapRequest,
-      true,
       '   ', // Empty/whitespace API token
     );
 
@@ -371,7 +358,7 @@ describe('validateZapReceiptWithCoinos', () => {
     const zapRequest = createMockZapRequest();
     const zapReceipt = { ...createMockZapReceipt(targetEventId, zapRequest.id), kind: 1 }; // Invalid kind
 
-    const result = await validateZapReceiptWithCoinos(zapReceipt, targetEventId, zapRequest, true, 'test-api-token');
+    const result = await validateZapReceiptWithCoinos(zapReceipt, targetEventId, zapRequest, 'test-api-token');
 
     expect(result.valid).toBe(false);
     expect(result.error).toBe('Basic zap receipt validation failed');
@@ -388,7 +375,7 @@ describe('validateZapReceiptWithCoinos', () => {
       error: 'No matching payment found in Coinos API',
     });
 
-    const result = await validateZapReceiptWithCoinos(zapReceipt, targetEventId, zapRequest, true, 'test-api-token');
+    const result = await validateZapReceiptWithCoinos(zapReceipt, targetEventId, zapRequest, 'test-api-token');
 
     expect(result.valid).toBe(false);
     expect(result.coinosVerified).toBe(false);
@@ -403,7 +390,7 @@ describe('validateZapReceiptWithCoinos', () => {
 
     mockVerifyCoinosPayment.mockRejectedValueOnce(new Error('Network error'));
 
-    const result = await validateZapReceiptWithCoinos(zapReceipt, targetEventId, zapRequest, true, 'test-api-token');
+    const result = await validateZapReceiptWithCoinos(zapReceipt, targetEventId, zapRequest, 'test-api-token');
 
     expect(result.valid).toBe(false);
     expect(result.error).toContain('Verification error: Network error');
@@ -528,62 +515,6 @@ describe('subscribeToZapReceipts', () => {
     // Fast forward time to check pool cleanup
     vi.advanceTimersByTime(1000);
     expect(mockPoolInstance.close).toHaveBeenCalled();
-
-    consoleSpy.mockRestore();
-  });
-
-  it('should pass allowDirectNostrZap parameter to validateZapReceipt', async () => {
-    const targetEventId = 'target-event-id';
-    const zapRequest: NostrEvent = {
-      id: 'zap-request-id',
-      pubkey: 'zap-pubkey',
-      created_at: Math.floor(Date.now() / 1000),
-      kind: 9734,
-      tags: [],
-      content: '',
-      sig: 'zap-sig',
-    };
-    const onZapReceived = vi.fn();
-
-    const mockSubscription = {
-      close: vi.fn(),
-    };
-    mockPoolInstance.subscribeMany.mockReturnValue(mockSubscription);
-
-    // allowDirectNostrZap = false でサブスクリプションを作成
-    subscribeToZapReceipts(targetEventId, zapRequest, onZapReceived, 5000, false);
-
-    // oneventコールバックを取得
-    const subscribeArgs = mockPoolInstance.subscribeMany.mock.calls[0];
-    const handlers = subscribeArgs[2];
-    const oneventHandler = handlers.onevent;
-
-    // テスト用のzap receiptイベント
-    const zapReceipt: NostrEvent = {
-      id: 'zap-receipt-id',
-      pubkey: 'lightning-service-pubkey',
-      created_at: Math.floor(Date.now() / 1000),
-      kind: 9735,
-      tags: [
-        ['bolt11', 'lnbc1000n1...'],
-        ['description', JSON.stringify({ id: 'different-id' })], // 異なるIDを設定
-        ['e', targetEventId],
-      ],
-      content: '',
-      sig: 'receipt-sig',
-    };
-
-    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-    // oneventを呼び出し（非同期処理を待つ）
-    await oneventHandler(zapReceipt);
-
-    // allowDirectNostrZap = false の場合、description検証が実行され、onZapReceivedは呼ばれないはず
-    expect(onZapReceived).not.toHaveBeenCalled();
-    expect(consoleSpy).toHaveBeenCalledWith(
-      `[Zap Monitor] Invalid zap receipt for event: ${targetEventId}`,
-      expect.any(String),
-    );
 
     consoleSpy.mockRestore();
   });

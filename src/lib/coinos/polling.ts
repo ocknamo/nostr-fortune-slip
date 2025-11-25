@@ -38,7 +38,7 @@ export function startCoinosPolling(
 
     try {
       // 支払い履歴を取得
-      const paymentsData = await getCoinosPayments(coinosApiToken, 100);
+      const paymentsData = await getCoinosPayments(coinosApiToken, 10);
 
       // 時間窓を設定（ポーリング開始時刻の前後10分）
       const windowStart = startTime - 600000; // 10分前
