@@ -383,7 +383,7 @@ function handleAnimationComplete() {
   <!-- 設定アイコン - 右上に配置 -->
   <button 
     on:click={navigateToSettings}
-    class="absolute top-14 right-4 w-12 h-12 bg-opacity-70 rounded-full flex items-center justify-center hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 z-10"
+    class="absolute top-14 right-4 w-12 h-12 bg-opacity-70 rounded-4xl flex items-center justify-center hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 z-10"
     aria-label="設定画面へ"
   >
     <img src={settingsIcon} alt="設定" class="w-10 h-10" />
@@ -451,7 +451,7 @@ function handleAnimationComplete() {
             {#if isWaitingForZap}
               <button
                 on:click={resetFortuneSlip}
-                class="font-medium py-2 px-4 transition-colors mt-4 border rounded-full"
+                class="font-medium py-2 px-4 transition-colors mt-4 border rounded-4xl"
               >
                 Cancel
               </button>
@@ -469,7 +469,7 @@ function handleAnimationComplete() {
           <button
             on:click={generateQRCode}
             disabled={isLoading || isWaitingForZap}
-            class="h-20 w-80 bg-red-900 disabled:bg-amber-600 disabled:cursor-not-allowed text-white text-3xl font-medium py-4 px-4 transition-colors outline-1 pl-6 pr-6 rounded-full"
+            class="h-20 w-80 bg-red-900 disabled:bg-amber-600 disabled:cursor-not-allowed text-white text-3xl font-medium py-4 px-4 outline-1 pl-6 pr-6 rounded-4xl"
           >
             {#if isLoading}
               <div class="flex items-center justify-center">
