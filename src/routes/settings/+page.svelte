@@ -9,7 +9,7 @@ import backgroundImage from '$lib/assets/background.jpg';
 let lightningAddress = '';
 let nostrPrivateKey = '';
 let coinosApiToken = '';
-let eventTag = ''; // イベントタグ
+let zapAmount = 100; // Zap金額（sats）
 let showApiToken = false;
 let showPin = false; // PIN表示切り替え
 let pinCode = ''; // PIN設定用
@@ -44,7 +44,8 @@ onMount(() => {
     lightningAddress = localStorage.getItem('lightningAddress') || '';
     nostrPrivateKey = localStorage.getItem('nostrPrivateKey') || '';
     coinosApiToken = localStorage.getItem('coinosApiToken') || '';
-    eventTag = localStorage.getItem('eventTag') || 'nostrasia2025'; // デフォルト値
+    const storedZapAmount = localStorage.getItem('zapAmount');
+    zapAmount = storedZapAmount ? parseInt(storedZapAmount, 10) : 100; // デフォルト100 sats
     pinCode = storedPin;
   }
 });
@@ -74,6 +75,13 @@ function validateForm(): boolean {
     errors.pinCode = '4桁の数字を入力してください';
   }
 
+  // Zap金額のバリデーション
+  if (!zapAmount || zapAmount < 1 || zapAmount > 1000) {
+    errors.zapAmount = 'Zap金額は1〜1000 satsの範囲で入力してください';
+  } else if (!Number.isInteger(zapAmount)) {
+    errors.zapAmount = 'Zap金額は整数で入力してください';
+  }
+
   // Coinos API Token（オプショナル）はバリデーションなし
 
   return Object.keys(errors).length === 0;
@@ -85,7 +93,7 @@ function handleSave() {
     localStorage.setItem('lightningAddress', lightningAddress);
     localStorage.setItem('nostrPrivateKey', nostrPrivateKey);
     localStorage.setItem('coinosApiToken', coinosApiToken);
-    localStorage.setItem('eventTag', eventTag);
+    localStorage.setItem('zapAmount', zapAmount.toString());
     localStorage.setItem('settingsPin', pinCode);
 
     showSuccessMessage = true;
@@ -116,7 +124,7 @@ function handleClearData() {
     localStorage.removeItem('lightningAddress');
     localStorage.removeItem('nostrPrivateKey');
     localStorage.removeItem('coinosApiToken');
-    localStorage.removeItem('eventTag');
+    localStorage.removeItem('zapAmount');
     localStorage.removeItem('settingsPin');
     // 旧データも削除（後方互換性のため）
     localStorage.removeItem('coinosId');
@@ -126,7 +134,7 @@ function handleClearData() {
     lightningAddress = '';
     nostrPrivateKey = '';
     coinosApiToken = '';
-    eventTag = 'nostrasia2025'; // デフォルト値にリセット
+    zapAmount = 100; // デフォルト値にリセット
     pinCode = '0000'; // デフォルトPINにリセット
 
     showDeleteMessage = true;
@@ -320,19 +328,27 @@ function handleClearData() {
           {/if}
         </div>
 
-        <!-- イベントタグ -->
+        <!-- Zap金額 -->
         <div>
-          <label for="event-tag" class="block text-sm font-medium text-gray-700 mb-2">
-            イベントタグ
+          <label for="zap-amount" class="block text-sm font-medium text-gray-700 mb-2">
+            Zap金額（sats）
           </label>
           <input
-            id="event-tag"
-            type="text"
-            bind:value={eventTag}
-            placeholder="nostrasia2025"
+            id="zap-amount"
+            type="number"
+            min="1"
+            max="1000"
+            step="1"
+            bind:value={zapAmount}
+            placeholder="100"
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            class:border-red-500={errors.zapAmount}
           />
-          <p class="mt-1 text-sm text-gray-500">フォーチュンメッセージに含めるイベントタグ(ハッシュタグ)</p>
+          {#if errors.zapAmount}
+            <p class="mt-1 text-sm text-red-600">{errors.zapAmount}</p>
+          {:else}
+            <p class="mt-1 text-sm text-gray-500">おみくじを引くために必要なZap金額（1〜1000 sats）</p>
+          {/if}
         </div>
 
         <!-- 保存ボタン -->

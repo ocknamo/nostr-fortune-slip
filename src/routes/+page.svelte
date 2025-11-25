@@ -45,7 +45,7 @@ let autoResetTimerId: number | null = null;
 let lightningAddress = '';
 let nostrPrivateKey = '';
 let coinosApiToken = '';
-let eventTag = ''; // イベントタグ
+let zapAmount = 100; // Zap金額（sats）デフォルト値
 
 // 設定データを読み込み
 onMount(() => {
@@ -53,7 +53,8 @@ onMount(() => {
     lightningAddress = localStorage.getItem('lightningAddress') || '';
     nostrPrivateKey = localStorage.getItem('nostrPrivateKey') || '';
     coinosApiToken = localStorage.getItem('coinosApiToken') || '';
-    eventTag = localStorage.getItem('eventTag') || 'nostrasia2025'; // デフォルト値
+    const storedZapAmount = localStorage.getItem('zapAmount');
+    zapAmount = storedZapAmount ? parseInt(storedZapAmount, 10) : 100; // デフォルト100 sats
   }
 });
 
@@ -112,41 +113,7 @@ async function onZapDetected(zapReceipt: NostrEvent) {
   randomNumber = generateLuckyNumber(1, 20);
   // アニメーション表示を開始
   isAnimationPlaying = true;
-  // 待機状態を終了
-  isWaitingForZap = false;
-
-  try {
-    // フォーチュン機能を実行（メンション付きkind1イベントを送信）
-    if (currentTargetEventId && nostrPrivateKey) {
-      const fortuneResult = await handleZapReceived(
-        zapReceipt,
-        currentTargetEventId,
-        nostrPrivateKey,
-        randomNumber,
-        eventTag,
-      );
-
-      if (fortuneResult) {
-        console.log('[Fortune Slip] Fortune message sent successfully!');
-      } else {
-        console.warn('[Fortune Slip] Failed to send fortune message');
-      }
-    }
-
-    // サブスクリプション停止
-    stopZapMonitoring();
-  } catch (error) {
-    console.error('[Fortune Slip] Error handling zap:', error);
-
-    // すでに成功している場合はrandomNumberに値が存在するのでそれを使用する
-    if (!randomNumber) {
-      // エラーが発生してもUI上では成功として表示
-      randomNumber = generateLuckyNumber(1, 20);
-    }
-    isAnimationPlaying = true;
-    isWaitingForZap = false;
-    stopZapMonitoring();
-  }
+  stopZapMonitoring();
 }
 
 function onZapError(error: string) {
@@ -157,8 +124,6 @@ function onZapError(error: string) {
 
   // QRコードを非表示
   qrCodeDataUrl = '';
-
-  // サブスクリプション停止
   stopZapMonitoring();
 }
 
@@ -235,7 +200,7 @@ async function generateQRCode() {
     console.log('[Fortune Slip] Generated payment ID:', paymentId);
 
     // 1 sat = 1000 millisats
-    const satsAmount = 100 * 1000; // TODO: デフォルト値を設定できるようにする
+    const satsAmount = zapAmount * 1000;
 
     // 6. Zapリクエストを作成（ランダム値をcommentに埋め込む）
     const zapRequest = createZapRequest(
@@ -327,7 +292,7 @@ function handleAnimationComplete() {
         {#if isWaitingForZap}
           <div class="rounded-md p-3 mb-2">
             <p class="text-m mt-2">
-              Scan the QR code and send 100 sats
+              Scan the QR code and send {zapAmount} sats
             </p>
           </div>
         {/if}
@@ -374,7 +339,7 @@ function handleAnimationComplete() {
                 Generating...
               </div>
             {:else}
-              Pray for 100 sats
+              Pray for {zapAmount} sats
             {/if}
           </button>
         </div>
