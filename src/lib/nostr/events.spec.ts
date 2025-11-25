@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { decodeNsec, createTextEvent, createZapRequest, createMetadataEvent } from './events.js';
 import type { NostrEvent } from './types.js';
-import { nip19, nip57, getPublicKey, finalizeEvent } from 'nostr-tools';
+import { nip19, nip57, finalizeEvent } from 'nostr-tools';
 
 // Mock nostr-tools
 vi.mock('nostr-tools', () => ({
@@ -11,7 +11,6 @@ vi.mock('nostr-tools', () => ({
   nip57: {
     makeZapRequest: vi.fn(),
   },
-  getPublicKey: vi.fn(),
   finalizeEvent: vi.fn(),
 }));
 
@@ -57,13 +56,11 @@ describe('createTextEvent', () => {
       sig: 'test-sig',
     } as any;
 
-    vi.mocked(getPublicKey).mockReturnValue('test-pubkey');
     vi.mocked(finalizeEvent).mockReturnValue(mockEvent);
 
     const result = createTextEvent(privateKey, 'test content');
 
     expect(result).toEqual(mockEvent);
-    expect(getPublicKey).toHaveBeenCalledWith(privateKey);
     expect(finalizeEvent).toHaveBeenCalledWith(
       expect.objectContaining({
         kind: 1,

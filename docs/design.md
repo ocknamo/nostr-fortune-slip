@@ -2,7 +2,7 @@
 
 ## プロジェクト概要
 
-Nostr Fortune Slipは、NostrプロトコルとLightning Networkを統合したおみくじアプリケーションです。ユーザーが1 satを支払うと、1-20のラッキーナンバーが表示され、Zapした人に自動でメンション付きフォーチュンメッセージが送信される仕組みです。PaymentID追跡とCoinosポーリングによるフォールバック機能も備えています。このドキュメントでは、設定画面、メイン画面、フォーチュンメッセージ機能、およびモジュール化されたコード構造の設計・実装について説明します。
+Nostr Fortune Slipは、NostrプロトコルとLightning Networkを統合したおみくじアプリケーションです。ユーザーが 100 satを支払うと、クライアント単独で支払いを検知して1-20のラッキーナンバーが表示されます。PaymentID追跡とCoinosポーリングによるフォールバック機能も備えています。このドキュメントでは、設定画面、メイン画面、フォーチュンメッセージ機能、およびモジュール化されたコード構造の設計・実装について説明します。
 
 ## 技術スタック
 
@@ -30,9 +30,6 @@ Nostr Fortune Slipは、NostrプロトコルとLightning Networkを統合した�
 - **Nostr秘密鍵**: nsec形式での入力
 - **Coinos ID**: 必須入力（今回の機能では使用しない）
 - **Coinosパスワード**: 必須入力、表示/非表示切り替え機能付き（今回の機能では使用しない）
-- **Nostrへの直接のzapを許可**: チェックボックス形式（デフォルト: true）
-  - true: NostrイベントQRコードとLightning InvoiceQRコード両方を表示、緩い検証
-  - false: Lightning InvoiceQRコードのみ表示、厳密なzap検証を実行
 
 ### 機能要件
 
@@ -43,16 +40,13 @@ Nostr Fortune Slipは、NostrプロトコルとLightning Networkを統合した�
 - 設定画面からメイン画面への戻る機能
 - セキュリティ警告の表示
 - データ削除機能（確認ダイアログ付き）
-- Zap検証設定の保存・読み込み（allowDirectNostrZap）
 
 #### メイン画面機能
 - **QRコード生成機能**: ボタンを押すとQRコードを表示
-- **Nostrイベント発行**: kind 1イベントを作成し、指定されたリレーに送信
-- **Zapリクエスト生成**: 発行したイベントに対するZapリクエスト（kind 9734）を作成
-- **ライトニングインボイス取得**: ライトニングアドレスから1 sat（1000 millisatoshi）のインボイスを取得
+- **Zapリクエスト生成**:生成したイベントに対するZapリクエスト（kind 9734）を作成
+- **ライトニングインボイス取得**: ライトニングアドレスから100 sat（100 * 1000 millisatoshi）のインボイスを取得
 - **QRコード表示**: `lightning:` + bolt11インボイス形式のQRコードを表示
 - **Zap検知機能**: kind 9735 Zap Receiptをリアルタイム監視
-- **フォーチュンメッセージ送信**: Zap検知後に送信者へ`nostr:npub..`形式でメンション付きメッセージ自動送信
 - **ラッキーナンバー表示**: 1-20の範囲でラッキーナンバーを生成・表示
 - **エラーハンドリング**: ライトニングアドレス無効やリレー接続失敗時のエラーメッセージ表示
 
@@ -63,18 +57,14 @@ Nostr Fortune Slipは、NostrプロトコルとLightning Networkを統合した�
 ```
 src/
 ├── lib/                        # コアライブラリ
-│   ├── lightning.ts            # Lightning Network関連
-│   ├── nostr/                  # Nostr関連機能（モジュール化）
-│   │   ├── index.ts            # 統合エクスポート
-│   │   ├── types.ts            # 型定義（NostrEvent, MetadataContent等）
-│   │   ├── events.ts           # イベント作成機能
-│   │   ├── zap.ts              # Zap関連機能（検知・バリデーション）
-│   │   ├── fortune.ts          # フォーチュンメッセージ機能
-│   │   ├── utils.ts            # ユーティリティ機能
-│   │   ├── events.spec.ts      # イベント作成テスト（8テスト）
-│   │   ├── zap.spec.ts         # Zap機能テスト（12テスト）
-│   │   ├── fortune.spec.ts     # フォーチュンテスト（11テスト）
-│   │   └── utils.spec.ts       # ユーティリティテスト（3テスト）
+│   ├── lightning.ts           # Lightning Network関連
+│   ├── nostr/                 # Nostr関連機能（モジュール化）
+│   │   ├── index.ts          # 統合エクスポート
+│   │   ├── types.ts          # 型定義（NostrEvent, MetadataContent等）
+│   │   ├── events.ts         # イベント作成機能
+│   │   ├── zap.ts            # Zap関連機能（検知・バリデーション）
+│   │   ├── fortune.ts        # フォーチュンメッセージ機能
+│   │   ├── *.spec.ts         # テスト
 │   ├── qrcode.ts              # QRコード生成
 │   └── *.spec.ts              # その他のテスト
 ├── routes/
@@ -90,8 +80,6 @@ src/
 ### テスト戦略
 
 - **機能別テスト**: 各モジュールに対応するテストファイル
-- **重複排除**: 元の巨大テストファイルを削除
-- **カバレッジ向上**: 合計34テスト（フォーチュン機能11テスト追加）
 - **成功率100%**: 全テストがパス
 
 ### メイン画面 (`src/routes/+page.svelte`)
@@ -104,7 +92,7 @@ src/
 
 2. **Nostr機能**
    - WebSocket接続によるリレーサーバー通信 (`wss://nos.lol/`)
-   - kind 1イベント（Fortune Slip Request）の作成・送信
+   - kind 1イベント（Fortune Slip Request）の作成
    - nsec形式の秘密鍵のデコード・署名処理
 
 3. **Zapリクエスト処理**
@@ -114,33 +102,17 @@ src/
 
 4. **デュアルQRコード生成・表示**
    - **Lightning Invoice QRコード**: `lightning:` + bolt11インボイス形式（常に表示）
-   - **Nostr Event Link QRコード**: `nostr:nevent1...` 形式（allowDirectNostrZap設定に基づき表示/非表示）
    - qrcode ライブラリ（v1.5.4）を使用した2つのQRコード並列表示
    - 各QRコードに明確なラベル付け
 
-5. **Nostr Event URI生成**
-   - 作成されたkind1イベントから`nevent1`エンコード
-   - event ID、relays、author、kindを含むeventPointer作成
-   - NIP-19準拠の`nostr:nevent1...`形式URI生成
-
 #### 技術仕様
 
-- **Nostrリレー**: `['wss://relay.damus.io/', 'wss://nos.lol/', 'wss://relay.nostr.band/', 'wss://r.kojira.io/']`
-- **イベント内容**: `"Fortune Slip Request"`（kind 1）
-- **支払い金額**: 1 sat（1000 millisatoshi）
+- **支払い金額**: 100 sat（100*1000 millisatoshi）
 - **QRコード形式**: 
   - Lightning Invoice: `lightning:lnbc...`
-  - Nostr Event Link: `nostr:nevent1...`
-- **nevent1エンコード**: NIP-19準拠のeventPointer（ID, relays, author, kind）
 - **フォーチュンメッセージ**: 
-  - メンション形式: `nostr:npub1...`（NIP-19準拠）
-  - メッセージ言語: 日本語（絵文字付き）
   - ラッキーナンバー範囲: 1-20
-- **Nostrタグ**: `p`タグ（メンション）+ `e`タグ（リプライ）
-- **QRコード設定**: 256px幅、PNG形式、マージン1px
-- **Zap検証**: allowDirectNostrZap設定により検証レベルを調整
-  - true（デフォルト）: 緩い検証、直接zapを許可
-  - false: 厳密な検証、descriptionとzap requestの一致を要求
+- **Zap検証**: 厳密な検証、descriptionとzap requestの一致を要求
 - **エラー処理**: ユーザーへのエラーメッセージ表示
 
 #### QRコード生成機能詳細
@@ -149,11 +121,6 @@ src/
 // Lightning Invoice QRコード生成
 const qrCode = await generateLightningQRCode(invoice.pr);
 // → `lightning:lnbc...`形式でQR生成
-
-// Nostr Event Link QRコード生成  
-const neventUri = createNeventUri(textEvent);
-const neventQrCode = await generateGenericQRCode(neventUri);
-// → `nostr:nevent1...`形式でQR生成（プレフィックスなし）
 ```
 
 #### 処理フロー
@@ -166,17 +133,12 @@ const neventQrCode = await generateGenericQRCode(neventUri);
 6. Zapリクエスト（kind 9734）を作成
 7. インボイスを取得（1 sat）
 8. **Lightning Invoice QRコード**を生成・表示
-9. **作成されたNostr EventからneventURIを生成**
-10. **Nostr Event Link QRコード**を生成・表示
-11. **2つのQRコードを縦に並べて同時表示**
+11. **QRコードを表示**
 12. **Zap Receipt監視開始**（kind 9735イベント検知）
-    - allowDirectNostrZap設定に基づきzap検証の厳密さを調整
-    - false時: descriptionタグ内のzap request IDを厳密に検証
+    - descriptionタグ内のzap request IDを厳密に検証
 13. **Zap検知時の処理**:
-    - Zapした人の公開鍵を抽出
+    - Zapした支払いの検証
     - 1-20の範囲でラッキーナンバー生成
-    - `nostr:npub..`形式でメンション付きフォーチュンメッセージ作成
-    - kind 1イベント（`p`タグ + `e`タグ付き）として送信
     - UIに同じラッキーナンバーを表示
 
 ### 設定画面 (`src/routes/settings/+page.svelte`)
@@ -238,24 +200,7 @@ if (!coinosPassword.trim()) {
 6. **セキュリティ警告**: LocalStorage使用に関する適切な警告表示
 7. **データ削除機能**: 確認ダイアログと削除完了メッセージが正常動作
 
-### ✅ 解決済みの問題
-
-1. **データ復元機能の不具合**（解決済み）
-   - SessionStorageからLocalStorageに変更することで、ブラウザ再起動後もデータが永続化される
-   - LocalStorageは明示的に削除されるまでデータが保持される
-
 ## 今後の改善点
-
-### 短期改善
-
-1. **LocalStorage実装の改善**（一部完了）
-   - ✅ データクリア機能の追加
-   - ✅ セキュリティ警告の表示
-   - エラーハンドリングの強化
-
-2. **UX向上**
-   - フォーム送信時のローディング表示
-   - 自動保存機能の検討
 
 ### 長期改善
 
@@ -270,13 +215,6 @@ if (!coinosPassword.trim()) {
    - 設定の検証・テスト機能
 
 ## スタイルガイド
-
-### カラーパレット
-
-- **Primary**: Blue 600/700 (`bg-blue-600 hover:bg-blue-700`)
-- **Success**: Green 100/300/700
-- **Error**: Red 500/600
-- **Gray**: Gray 50/300/500/600/700/900
 
 ### レスポンシブ対応
 
@@ -305,6 +243,6 @@ npm run preview
 
 ---
 
-**作成日**: 2025/10/24  
-**作成者**: AI Assistant  
-**バージョン**: 1.0
+**作成日**: 2025/11/26  
+**作成者**: Ocknamo  
+**バージョン**: 2.0

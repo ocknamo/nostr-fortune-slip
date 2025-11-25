@@ -25,17 +25,6 @@ export async function generateLightningQRCode(invoice: string): Promise<string> 
 }
 
 /**
- * Nostr event用のQRコードを生成
- * @param nevent bolt11 invoice string
- * @returns Data URL形式のQRコード画像
- */
-export async function generateNostrQRCode(event: string): Promise<string> {
-  // lightning: プレフィックスを追加
-  const eventUri = `nostr:${event}`;
-  return generateQRCode(eventUri);
-}
-
-/**
  * 汎用QRコードを生成（プレフィックスなし）
  * @param content QRコードにエンコードする内容
  * @returns Data URL形式のQRコード画像

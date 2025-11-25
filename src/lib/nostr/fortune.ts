@@ -1,8 +1,4 @@
-import { getPublicKey, finalizeEvent } from 'nostr-tools';
 import type { NostrEvent } from './types.js';
-import { decodeNsec } from './events.js';
-import { publishEvent } from './utils.js';
-import { getResultEventMessage } from './message-text.js';
 
 /**
  * ラッキーナンバーを生成（min-maxの範囲）
@@ -28,70 +24,5 @@ export function extractZapperPubkey(zapReceipt: NostrEvent): string | null {
   } catch (error) {
     console.error('Failed to parse zap request from description:', error);
     return null;
-  }
-}
-
-/**
- * メンション付きkind1イベントを作成
- */
-export function createMentionEvent(
-  privateKeyHex: Uint8Array,
-  zapperPubkey: string,
-  originalEventId: string,
-  luckyNumber: number,
-  tagString: string,
-): NostrEvent {
-  const content = getResultEventMessage(zapperPubkey, luckyNumber, tagString);
-  const publicKey = getPublicKey(privateKeyHex);
-
-  const event = {
-    kind: 1,
-    pubkey: publicKey,
-    created_at: Math.floor(Date.now() / 1000),
-    tags: [
-      ['p', zapperPubkey], // メンション対象
-      ['e', originalEventId, '', 'reply'], // 元のイベントへのリプライ
-      ['t', tagString], // ハッシュタグ
-    ],
-    content: content,
-  };
-
-  const signedEvent = finalizeEvent(event, privateKeyHex);
-  return signedEvent as NostrEvent;
-}
-
-/**
- * Zap検知後の処理を統合した主要機能
- */
-export async function handleZapReceived(
-  zapReceipt: NostrEvent,
-  originalEventId: string,
-  privateKeyNsec: string,
-  luckyNumber: number,
-  tagString: string = 'omikuji',
-): Promise<boolean> {
-  try {
-    // Zapした人の公開鍵を取得
-    const zapperPubkey = extractZapperPubkey(zapReceipt);
-    if (!zapperPubkey) {
-      console.error('Could not extract zapper pubkey from zap receipt');
-      return false;
-    }
-
-    console.log(`Generating fortune for zapper: ${zapperPubkey}, lucky number: ${luckyNumber}`);
-
-    // 秘密鍵をデコード
-    const privateKeyHex = decodeNsec(privateKeyNsec);
-
-    // メンション付きイベントを作成
-    const mentionEvent = createMentionEvent(privateKeyHex, zapperPubkey, originalEventId, luckyNumber, tagString);
-
-    // イベントを送信
-    await publishEvent(mentionEvent);
-
-    return true;
-  } catch (error) {
-    console.error('Error handling zap receipt:', error);
-    return false;
   }
 }

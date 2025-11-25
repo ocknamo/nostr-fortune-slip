@@ -132,11 +132,11 @@ export async function verifyCoinosPayment(
     }
 
     // Coinos APIから支払い履歴を取得
-    const paymentsData = await getCoinosPayments(token, 100); // 最大100件取得
+    const paymentsData = await getCoinosPayments(token, 10); // 最大10件取得
 
     // Zapレシートの作成時刻を基準にした時間窓を設定
     const zapTimestamp = zapReceipt.created_at * 1000; // ミリ秒に変換
-    const windowStart = zapTimestamp - timeWindowMs;
+    const windowStart = zapTimestamp;
     const windowEnd = zapTimestamp + timeWindowMs;
 
     console.debug('[Coinos Verification] Looking for payment with preimage:', zapData.preimage);
