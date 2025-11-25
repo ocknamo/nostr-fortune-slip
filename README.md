@@ -154,6 +154,7 @@ npm run fix
 
 1. アプリを起動後、「設定画面へ」ボタンをクリック
 2. 以下の情報を入力：
+   - **PIN**: 管理画面に入るためのPINコード(デフォルト0000)。オペレーション上必要な簡易的な保護を提供
    - **ライトニングアドレス**: `user@domain.com` 形式
    - **Nostr秘密鍵**: `nsec1...` 形式
    - **Coinos Read-Only API Token（オプション）**: Coinos支払い検証用のRead-Only APIトークン

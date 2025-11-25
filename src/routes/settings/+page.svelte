@@ -24,7 +24,7 @@ let isAuthenticated = false; // PIN認証状態
 onMount(() => {
   if (typeof window !== 'undefined') {
     // PIN認証チェック
-    const storedPin = localStorage.getItem('settingsPin') || '1122'; // デフォルトPIN
+    const storedPin = localStorage.getItem('settingsPin') || '0000'; // デフォルトPIN
     const inputPin = prompt('設定画面にアクセスするには4桁のPINを入力してください:');
 
     if (inputPin === null) {
@@ -127,7 +127,7 @@ function handleClearData() {
     nostrPrivateKey = '';
     coinosApiToken = '';
     eventTag = 'nostrasia2025'; // デフォルト値にリセット
-    pinCode = '1128'; // デフォルトPINにリセット
+    pinCode = '0000'; // デフォルトPINにリセット
 
     showDeleteMessage = true;
     setTimeout(() => {
