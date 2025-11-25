@@ -3,6 +3,8 @@ import { goto } from '$app/navigation';
 import { base } from '$app/paths';
 import { onMount } from 'svelte';
 
+import backgroundImage from '$lib/assets/background.jpg';
+
 // フォームデータ
 let lightningAddress = '';
 let nostrPrivateKey = '';
@@ -143,7 +145,7 @@ function handleClearData() {
 </script>
 
 {#if isAuthenticated}
-<div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+<div class="min-h-screen py-12 px-4 sm:px-6 lg:px-8 bg-cover bg-center" style="background-image: url('{backgroundImage}');">
   <div class="max-w-md mx-auto">
     <div class="bg-white shadow rounded-lg p-6">
       <div class="flex items-center justify-between mb-6">

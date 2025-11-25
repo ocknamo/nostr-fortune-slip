@@ -26,9 +26,7 @@ import { generateLightningQRCode, generateNostrQRCode } from '$lib/qrcode';
 import { nip57 } from 'nostr-tools';
 import { startCoinosPolling, type CoinosPollingSubscription } from '$lib/coinos';
 
-import bg from '$lib/assets/background.png';
-
-let backgroundImage = bg;
+import backgroundImage from '$lib/assets/background.jpg';
 
 // QR code display type enum
 type QRCodeDisplayType = 'nostr' | 'lightning';
@@ -379,7 +377,7 @@ function handleAnimationComplete() {
 }
 </script>
 
-<div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 bg-cover bg-center relative flex flex-col" style="background-image: url('{backgroundImage}');">
+<div class="min-h-screen py-12 px-4 sm:px-6 lg:px-8 bg-cover bg-center relative flex flex-col" style="background-image: url('{backgroundImage}');">
   <!-- 設定アイコン - 右上に配置 -->
   <button 
     on:click={navigateToSettings}
