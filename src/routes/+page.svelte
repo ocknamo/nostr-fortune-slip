@@ -15,6 +15,7 @@ import {
   type NostrEvent,
   generateLuckyNumber,
   generateRandomBase64,
+  getFortuneText,
 } from '$lib/nostr';
 import { generateLightningQRCode } from '$lib/qrcode';
 import { nip57 } from 'nostr-tools';
@@ -46,6 +47,10 @@ let lightningAddress = '';
 let nostrPrivateKey = '';
 let coinosApiToken = '';
 let zapAmount = 100; // Zap金額（sats）デフォルト値
+let fortuneMin = 1; // くじの最小値
+let fortuneMax = 20; // くじの最大値
+let fortuneTexts: string[] = []; // くじの内容配列
+let fortuneTextForNumber: string | null = null; // 生成された数字に対応するテキスト
 
 // 設定データを読み込み
 onMount(() => {
@@ -55,6 +60,19 @@ onMount(() => {
     coinosApiToken = localStorage.getItem('coinosApiToken') || '';
     const storedZapAmount = localStorage.getItem('zapAmount');
     zapAmount = storedZapAmount ? parseInt(storedZapAmount, 10) : 100; // デフォルト100 sats
+
+    // くじ設定を読み込み
+    const storedFortuneMin = localStorage.getItem('fortuneMin');
+    fortuneMin = storedFortuneMin ? parseInt(storedFortuneMin, 10) : 1;
+    const storedFortuneMax = localStorage.getItem('fortuneMax');
+    fortuneMax = storedFortuneMax ? parseInt(storedFortuneMax, 10) : 20;
+    const storedFortuneTexts = localStorage.getItem('fortuneTexts');
+    fortuneTexts = storedFortuneTexts
+      ? storedFortuneTexts
+          .split(',')
+          .map((t) => t.trim())
+          .filter((t) => t)
+      : [];
   }
 });
 
@@ -109,8 +127,10 @@ async function onZapDetected(zapReceipt: NostrEvent) {
 
   // QRコードを非表示
   qrCodeDataUrl = '';
-  // 番号生成
-  randomNumber = generateLuckyNumber(1, 20);
+  // 番号生成（設定された範囲を使用）
+  randomNumber = generateLuckyNumber(fortuneMin, fortuneMax);
+  // おみくじテキストを取得
+  fortuneTextForNumber = getFortuneText(randomNumber, fortuneTexts);
   // アニメーション表示を開始
   isAnimationPlaying = true;
   stopZapMonitoring();
@@ -139,8 +159,10 @@ async function onCoinosPaymentDetected(payment: any) {
 
   // QRコードを非表示
   qrCodeDataUrl = '';
-  // 番号生成
-  randomNumber = generateLuckyNumber(1, 20);
+  // 番号生成（設定された範囲を使用）
+  randomNumber = generateLuckyNumber(fortuneMin, fortuneMax);
+  // おみくじテキストを取得
+  fortuneTextForNumber = getFortuneText(randomNumber, fortuneTexts);
   // アニメーション表示を開始
   isAnimationPlaying = true;
   stopZapMonitoring();
@@ -356,10 +378,15 @@ function handleAnimationComplete() {
       <!-- Zap検知後のランダム数字表示 -->
       {#if zapDetected && !isAnimationPlaying}
       <div class="mb-6 bg-white pl-4 pr-4 w-50">
-        <div class="flex justify-center mb-4 border-b">
+        <div class="flex flex-col justify-center mb-4 border-b pb-4">
           <div class="h-36 flex items-center justify-center">
             <span class="font-bold text-rose-500 text-7xl mb-4">{randomNumber}</span>
           </div>
+          {#if fortuneTextForNumber}
+            <div class="text-center">
+              <p class="text-2xl font-semibold text-gray-800">{fortuneTextForNumber}</p>
+            </div>
+          {/if}
         </div>
         <h3 class="text-2xl font-bold">All done!</h3>
         <p class="text-sm text-gray-600 text-center mb-4 mt-4 font-bold">

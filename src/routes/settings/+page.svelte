@@ -13,6 +13,9 @@ let zapAmount = 100; // Zap金額（sats）
 let showApiToken = false;
 let showPin = false; // PIN表示切り替え
 let pinCode = ''; // PIN設定用
+let fortuneMin = 1; // くじの最小値
+let fortuneMax = 20; // くじの最大値
+let fortuneTexts = ''; // くじの内容（カンマ区切り）
 
 // UI状態
 let showSuccessMessage = false;
@@ -47,6 +50,13 @@ onMount(() => {
     const storedZapAmount = localStorage.getItem('zapAmount');
     zapAmount = storedZapAmount ? parseInt(storedZapAmount, 10) : 100; // デフォルト100 sats
     pinCode = storedPin;
+
+    // くじ設定を読み込み
+    const storedFortuneMin = localStorage.getItem('fortuneMin');
+    fortuneMin = storedFortuneMin ? parseInt(storedFortuneMin, 10) : 1;
+    const storedFortuneMax = localStorage.getItem('fortuneMax');
+    fortuneMax = storedFortuneMax ? parseInt(storedFortuneMax, 10) : 20;
+    fortuneTexts = localStorage.getItem('fortuneTexts') || '';
   }
 });
 
@@ -82,7 +92,20 @@ function validateForm(): boolean {
     errors.zapAmount = 'Zap金額は整数で入力してください';
   }
 
+  // くじ範囲のバリデーション
+  if (!fortuneMin || !Number.isInteger(fortuneMin) || fortuneMin < 1) {
+    errors.fortuneMin = '最小値は1以上の整数を入力してください';
+  }
+  if (!fortuneMax || !Number.isInteger(fortuneMax) || fortuneMax < 1) {
+    errors.fortuneMax = '最大値は1以上の整数を入力してください';
+  }
+  if (fortuneMin && fortuneMax && fortuneMin >= fortuneMax) {
+    errors.fortuneMin = '最小値は最大値より小さくしてください';
+    errors.fortuneMax = '最大値は最小値より大きくしてください';
+  }
+
   // Coinos API Token（オプショナル）はバリデーションなし
+  // fortuneTexts（オプショナル）もバリデーションなし
 
   return Object.keys(errors).length === 0;
 }
@@ -95,6 +118,9 @@ function handleSave() {
     localStorage.setItem('coinosApiToken', coinosApiToken);
     localStorage.setItem('zapAmount', zapAmount.toString());
     localStorage.setItem('settingsPin', pinCode);
+    localStorage.setItem('fortuneMin', fortuneMin.toString());
+    localStorage.setItem('fortuneMax', fortuneMax.toString());
+    localStorage.setItem('fortuneTexts', fortuneTexts);
 
     showSuccessMessage = true;
     setTimeout(() => {
@@ -126,6 +152,9 @@ function handleClearData() {
     localStorage.removeItem('coinosApiToken');
     localStorage.removeItem('zapAmount');
     localStorage.removeItem('settingsPin');
+    localStorage.removeItem('fortuneMin');
+    localStorage.removeItem('fortuneMax');
+    localStorage.removeItem('fortuneTexts');
     // 旧データも削除（後方互換性のため）
     localStorage.removeItem('coinosId');
     localStorage.removeItem('coinosPassword');
@@ -136,6 +165,9 @@ function handleClearData() {
     coinosApiToken = '';
     zapAmount = 100; // デフォルト値にリセット
     pinCode = '0000'; // デフォルトPINにリセット
+    fortuneMin = 1;
+    fortuneMax = 20;
+    fortuneTexts = '';
 
     showDeleteMessage = true;
     setTimeout(() => {
@@ -349,6 +381,72 @@ function handleClearData() {
           {:else}
             <p class="mt-1 text-sm text-gray-500">おみくじを引くために必要なZap金額（1〜1000 sats）</p>
           {/if}
+        </div>
+
+        <!-- くじの範囲設定 -->
+        <div class="border-t pt-6">
+          <h2 class="text-lg font-semibold text-gray-900 mb-4">おみくじ設定</h2>
+          
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <!-- 最小値 -->
+            <div>
+              <label for="fortune-min" class="block text-sm font-medium text-gray-700 mb-2">
+                最小値
+              </label>
+              <input
+                id="fortune-min"
+                type="number"
+                min="1"
+                step="1"
+                bind:value={fortuneMin}
+                placeholder="1"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                class:border-red-500={errors.fortuneMin}
+              />
+              {#if errors.fortuneMin}
+                <p class="mt-1 text-sm text-red-600">{errors.fortuneMin}</p>
+              {/if}
+            </div>
+
+            <!-- 最大値 -->
+            <div>
+              <label for="fortune-max" class="block text-sm font-medium text-gray-700 mb-2">
+                最大値
+              </label>
+              <input
+                id="fortune-max"
+                type="number"
+                min="1"
+                step="1"
+                bind:value={fortuneMax}
+                placeholder="20"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                class:border-red-500={errors.fortuneMax}
+              />
+              {#if errors.fortuneMax}
+                <p class="mt-1 text-sm text-red-600">{errors.fortuneMax}</p>
+              {/if}
+            </div>
+          </div>
+          <p class="text-sm text-gray-500 mb-4">くじの数字の範囲を設定します（例：1〜20）</p>
+
+          <!-- おみくじ内容 -->
+          <div>
+            <label for="fortune-texts" class="block text-sm font-medium text-gray-700 mb-2">
+              おみくじの内容（オプション）
+            </label>
+            <textarea
+              id="fortune-texts"
+              bind:value={fortuneTexts}
+              placeholder="大吉,中吉,小吉,吉,末吉,凶,大凶"
+              rows="3"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <p class="mt-1 text-sm text-gray-500">
+              カンマ区切りでおみくじの内容を入力します。空欄の場合は数字のみ表示されます。<br/>
+              数字が配列の長さを超える場合は、循環して表示されます。
+            </p>
+          </div>
         </div>
 
         <!-- 保存ボタン -->
