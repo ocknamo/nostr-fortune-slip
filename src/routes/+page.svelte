@@ -290,6 +290,16 @@ function handleAnimationComplete() {
 </script>
 
 <div class="min-h-screen py-12 px-4 sm:px-6 lg:px-8 bg-cover bg-center relative flex flex-col" style="background-image: url('{backgroundImage}');">
+  <!-- GitHub link - positioned at the bottom left -->
+  <a 
+    href="https://github.com/ocknamo/nostr-fortune-slip" 
+    target="_blank" 
+    rel="noopener noreferrer" 
+    class="absolute bottom-3 left-3 text-s text-white/70 hover:text-white/90 transition-colors z-100"
+    aria-label="GitHub repository"
+  >
+    GitHub
+  </a>
   <!-- 設定アイコン - 右上に配置 -->
   <button 
     on:click={navigateToSettings}
