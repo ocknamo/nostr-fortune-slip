@@ -8,6 +8,21 @@ export function generateLuckyNumber(min: number, max: number): number {
 }
 
 /**
+ * Get fortune text for a lucky number from the fortune texts array
+ * If the array is empty, returns null
+ * If the number exceeds array length, it cycles through using modulo
+ */
+export function getFortuneText(luckyNumber: number, fortuneTexts: string[]): string | null {
+  if (fortuneTexts.length === 0) {
+    return null;
+  }
+
+  // Convert to 0-based index and cycle through array using modulo
+  const index = (luckyNumber - 1) % fortuneTexts.length;
+  return fortuneTexts[index];
+}
+
+/**
  * ZapレシートからZapした人の公開鍵を取得
  */
 export function extractZapperPubkey(zapReceipt: NostrEvent): string | null {
