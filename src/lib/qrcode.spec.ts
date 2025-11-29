@@ -9,9 +9,84 @@ vi.mock('qrcode', () => ({
   },
 }));
 
+// Mock canvas API for browser environment
+class MockCanvasContext {
+  drawImage = vi.fn();
+  clearRect = vi.fn();
+  beginPath = vi.fn();
+  arc = vi.fn();
+  fill = vi.fn();
+  save = vi.fn();
+  restore = vi.fn();
+  clip = vi.fn();
+}
+
+class MockCanvas {
+  width = 0;
+  height = 0;
+  private context = new MockCanvasContext();
+
+  getContext() {
+    return this.context;
+  }
+
+  toDataURL() {
+    return 'data:image/png;base64,mockedWithIcon';
+  }
+}
+
+class MockImage {
+  onload: (() => void) | null = null;
+  onerror: ((error: Error) => void) | null = null;
+  src = '';
+
+  constructor() {
+    // Simulate successful image load after a microtask
+    Promise.resolve().then(() => {
+      if (this.onload) {
+        this.onload();
+      }
+    });
+  }
+}
+
+// Setup global mocks for DOM APIs
+global.document = {
+  createElement: (tag: string) => {
+    if (tag === 'canvas') {
+      return new MockCanvas() as any;
+    }
+    return {} as any;
+  },
+} as any;
+
+global.Image = MockImage as any;
+
 describe('generateLightningQRCode', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('should generate QR code with lightning icon overlay', async () => {
+    const mockInvoice = 'lnbc1000n1pjkhxhkpp5testinvoicedata';
+    const mockQRDataURL = 'data:image/png;base64,mockQRCode';
+
+    // biome-ignore lint/suspicious/noExplicitAny: test
+    vi.mocked(QRCode.toDataURL).mockResolvedValue(mockQRDataURL as any);
+
+    const result = await generateLightningQRCode(mockInvoice);
+
+    // Should return a data URL with the icon overlay applied
+    expect(result).toBe('data:image/png;base64,mockedWithIcon');
+    expect(QRCode.toDataURL).toHaveBeenCalledWith(`lightning:${mockInvoice}`, {
+      type: 'image/png',
+      margin: 1,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF',
+      },
+      width: 256,
+    });
   });
 
   it('should generate QR code for valid invoice', async () => {
@@ -23,7 +98,8 @@ describe('generateLightningQRCode', () => {
 
     const result = await generateLightningQRCode(mockInvoice);
 
-    expect(result).toBe(expectedDataURL);
+    expect(result).toBeDefined();
+    expect(result).toMatch(/^data:image\/png;base64,/);
     expect(QRCode.toDataURL).toHaveBeenCalledWith(`lightning:${mockInvoice}`, {
       type: 'image/png',
       margin: 1,
@@ -53,14 +129,15 @@ describe('generateLightningQRCode', () => {
 
   it('should handle empty invoice string', async () => {
     const mockInvoice = '';
-    const expectedDataURL = 'data:image/png;base64,empty...';
+    const mockQRDataURL = 'data:image/png;base64,empty...';
 
     // biome-ignore lint/suspicious/noExplicitAny: test
-    vi.mocked(QRCode.toDataURL).mockResolvedValue(expectedDataURL as any);
+    vi.mocked(QRCode.toDataURL).mockResolvedValue(mockQRDataURL as any);
 
     const result = await generateLightningQRCode(mockInvoice);
 
-    expect(result).toBe(expectedDataURL);
+    // Should return data URL with icon overlay
+    expect(result).toBe('data:image/png;base64,mockedWithIcon');
     expect(QRCode.toDataURL).toHaveBeenCalledWith('lightning:', expect.any(Object));
   });
 
@@ -68,14 +145,15 @@ describe('generateLightningQRCode', () => {
     // Test with a typical long Lightning invoice
     const longInvoice =
       'lnbc1000n1pjkhxhkpp5testinvoicedatawithverylongstringthatmightcauseproblemsinqrcodegenerationbutshouldbethandledcorrectly';
-    const expectedDataURL = 'data:image/png;base64,long...';
+    const mockQRDataURL = 'data:image/png;base64,long...';
 
     // biome-ignore lint/suspicious/noExplicitAny: test
-    vi.mocked(QRCode.toDataURL).mockResolvedValue(expectedDataURL as any);
+    vi.mocked(QRCode.toDataURL).mockResolvedValue(mockQRDataURL as any);
 
     const result = await generateLightningQRCode(longInvoice);
 
-    expect(result).toBe(expectedDataURL);
+    // Should return data URL with icon overlay
+    expect(result).toBe('data:image/png;base64,mockedWithIcon');
     expect(QRCode.toDataURL).toHaveBeenCalledWith(`lightning:${longInvoice}`, expect.any(Object));
   });
 
