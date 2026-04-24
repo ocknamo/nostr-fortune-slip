@@ -16,11 +16,22 @@ let pinCode = ''; // PIN設定用
 let fortuneMin = 1; // くじの最小値
 let fortuneMax = 20; // くじの最大値
 let fortuneTexts = ''; // くじの内容（カンマ区切り）
+let useDefaultFortuneTexts = false; // デフォルトおみくじ内容を使用するフラグ
+let savedFortuneTexts = ''; // useDefaultFortuneTexts切り替え前の内容を保持
 let donateToOpenSats = false; // OpenSatsに寄付するフラグ
 let savedLightningAddress = ''; // donateToOpenSats切り替え前のアドレスを保持
 
 const OPENSATS_ADDRESS = 'opensats@npub.cash';
+const DEFAULT_FORTUNE_TEXTS = '大吉,中吉,小吉,吉,末吉,凶,大凶';
 
+function handleUseDefaultFortuneTextsChange() {
+  if (useDefaultFortuneTexts) {
+    savedFortuneTexts = fortuneTexts;
+    fortuneTexts = DEFAULT_FORTUNE_TEXTS;
+  } else {
+    fortuneTexts = savedFortuneTexts;
+  }
+}
 
 function handleDonateToOpenSatsChange() {
   if (donateToOpenSats) {
@@ -77,7 +88,14 @@ onMount(() => {
     fortuneMin = storedFortuneMin ? parseInt(storedFortuneMin, 10) : 1;
     const storedFortuneMax = localStorage.getItem('fortuneMax');
     fortuneMax = storedFortuneMax ? parseInt(storedFortuneMax, 10) : 20;
-    fortuneTexts = localStorage.getItem('fortuneTexts') || '';
+    const storedFortuneTexts = localStorage.getItem('fortuneTexts') || '';
+    useDefaultFortuneTexts = localStorage.getItem('useDefaultFortuneTexts') === 'true';
+    if (useDefaultFortuneTexts) {
+      savedFortuneTexts = storedFortuneTexts;
+      fortuneTexts = DEFAULT_FORTUNE_TEXTS;
+    } else {
+      fortuneTexts = storedFortuneTexts;
+    }
   }
 });
 
@@ -142,7 +160,8 @@ function handleSave() {
     localStorage.setItem('settingsPin', pinCode);
     localStorage.setItem('fortuneMin', fortuneMin.toString());
     localStorage.setItem('fortuneMax', fortuneMax.toString());
-    localStorage.setItem('fortuneTexts', fortuneTexts);
+    localStorage.setItem('useDefaultFortuneTexts', useDefaultFortuneTexts.toString());
+    localStorage.setItem('fortuneTexts', useDefaultFortuneTexts ? savedFortuneTexts : fortuneTexts);
 
     showSuccessMessage = true;
     setTimeout(() => {
@@ -177,6 +196,7 @@ function handleClearData() {
     localStorage.removeItem('fortuneMin');
     localStorage.removeItem('fortuneMax');
     localStorage.removeItem('fortuneTexts');
+    localStorage.removeItem('useDefaultFortuneTexts');
     localStorage.removeItem('donateToOpenSats');
     // 旧データも削除（後方互換性のため）
     localStorage.removeItem('coinosId');
@@ -191,6 +211,7 @@ function handleClearData() {
     fortuneMin = 1;
     fortuneMax = 20;
     fortuneTexts = '';
+    useDefaultFortuneTexts = false;
     donateToOpenSats = false;
 
     showDeleteMessage = true;
@@ -473,15 +494,32 @@ function handleClearData() {
 
           <!-- おみくじ内容 -->
           <div>
-            <label for="fortune-texts" class="block text-sm font-medium text-gray-700 mb-2">
-              おみくじの内容（オプション）
-            </label>
+            <div class="flex items-center justify-between mb-2">
+              <label for="fortune-texts" class="block text-sm font-medium text-gray-700">
+                おみくじの内容（オプション）
+              </label>
+              <div class="flex items-center">
+                <input
+                  id="use-default-fortune-texts"
+                  type="checkbox"
+                  bind:checked={useDefaultFortuneTexts}
+                  on:change={handleUseDefaultFortuneTextsChange}
+                  class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label for="use-default-fortune-texts" class="ml-2 text-sm text-gray-700">
+                  デフォルト設定
+                </label>
+              </div>
+            </div>
             <textarea
               id="fortune-texts"
               bind:value={fortuneTexts}
               placeholder="大吉,中吉,小吉,吉,末吉,凶,大凶"
               rows="3"
+              disabled={useDefaultFortuneTexts}
               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              class:bg-gray-100={useDefaultFortuneTexts}
+              class:cursor-not-allowed={useDefaultFortuneTexts}
             />
             <p class="mt-1 text-sm text-gray-500">
               カンマ区切りでおみくじの内容を入力します。空欄の場合は数字のみ表示されます。<br/>
