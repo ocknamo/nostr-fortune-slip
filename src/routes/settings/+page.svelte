@@ -525,7 +525,7 @@ function handleClearData() {
               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               class:bg-gray-100={useDefaultFortuneTexts}
               class:cursor-not-allowed={useDefaultFortuneTexts}
-            />
+            ></textarea>
             <p class="mt-1 text-sm text-gray-500">
               カンマ区切りでおみくじの内容を入力します。空欄の場合は数字のみ表示されます。<br/>
               数字が配列の長さを超える場合は、循環して表示されます。

@@ -1,4 +1,4 @@
-import { nip19, nip57, getPublicKey, finalizeEvent, type EventTemplate } from 'nostr-tools';
+import { nip19, nip57, finalizeEvent, type EventTemplate } from 'nostr-tools';
 import type { NostrEvent, MetadataContent } from './types.js';
 import { RELAYS } from './relay.js';
 
