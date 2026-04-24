@@ -395,12 +395,14 @@ function handleAnimationComplete() {
       {#if zapDetected && !isAnimationPlaying}
       <div class="mb-6 bg-white pl-4 pr-4 w-50">
         <div class="flex flex-col justify-center mb-4 border-b pb-4">
+          {#if !hideOmikujiMessage}
           <div class="h-36 flex items-center justify-center">
             <span class="font-bold text-rose-500 text-7xl mb-4">{randomNumber}</span>
           </div>
+          {/if}
           {#if fortuneTextForNumber}
-            <div class="text-center">
-              <p class="text-2xl font-semibold text-gray-800">{fortuneTextForNumber}</p>
+            <div class="text-center {hideOmikujiMessage ? 'h-36 flex items-center justify-center' : ''}">
+              <p class="{hideOmikujiMessage ? 'text-6xl font-extrabold text-rose-500' : 'text-2xl font-semibold text-gray-800'}">{fortuneTextForNumber}</p>
             </div>
           {/if}
         </div>
