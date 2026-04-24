@@ -4,6 +4,7 @@ import { base } from '$app/paths';
 import { onMount, onDestroy } from 'svelte';
 import settingsIcon from '$lib/assets/settings.svg';
 import OmikujiAnimation from '$lib/components/OmikujiAnimation.svelte';
+import LightningReveal from '$lib/components/LightningReveal.svelte';
 import {
   decodeNsec,
   createTextEvent,
@@ -31,6 +32,7 @@ let isWaitingForZap = false;
 let zapDetected = false;
 let randomNumber: number | null = null;
 let isAnimationPlaying = false;
+let isLightningPlaying = false; // 稲妻演出中フラグ
 
 // Zap検知用の状態
 let zapSubscription: ZapReceiptSubscription | null = null;
@@ -186,6 +188,7 @@ function resetFortuneSlip() {
   randomNumber = null;
   isWaitingForZap = false;
   isAnimationPlaying = false;
+  isLightningPlaying = false;
   stopZapMonitoring();
   clearMessages();
 }
@@ -279,14 +282,29 @@ async function generateQRCode() {
 }
 
 function showSubmit() {
-  return !qrCodeDataUrl && !isWaitingForZap && !zapDetected && !isAnimationPlaying;
+  return !qrCodeDataUrl && !isWaitingForZap && !zapDetected && !isAnimationPlaying && !isLightningPlaying;
 }
 
 function handleAnimationComplete() {
-  // アニメーション完了後に番号表示に切り替え
+  // アニメーション完了後
   isAnimationPlaying = false;
-  zapDetected = true;
 
+  if (hideOmikujiMessage && fortuneTextForNumber) {
+    // 稲妻演出を開始
+    isLightningPlaying = true;
+  } else {
+    zapDetected = true;
+    startAutoReset();
+  }
+}
+
+function handleLightningComplete() {
+  isLightningPlaying = false;
+  zapDetected = true;
+  startAutoReset();
+}
+
+function startAutoReset() {
   // 20秒後に自動リセット
   autoResetTimerId = window.setTimeout(() => {
     console.log('[Fortune Slip] Auto-resetting after 20 seconds');
@@ -389,6 +407,11 @@ function handleAnimationComplete() {
       <div class="p-6 w-full max-w-md">
         <OmikujiAnimation onComplete={handleAnimationComplete} />
       </div>
+      {/if}
+
+      <!-- 稲妻演出 -->
+      {#if isLightningPlaying && fortuneTextForNumber}
+        <LightningReveal text={fortuneTextForNumber} onComplete={handleLightningComplete} />
       {/if}
 
       <!-- Zap検知後のランダム数字表示 -->
