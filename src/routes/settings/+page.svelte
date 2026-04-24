@@ -19,6 +19,7 @@ let fortuneTexts = ''; // くじの内容（カンマ区切り）
 let useDefaultFortuneTexts = false; // デフォルトおみくじ内容を使用するフラグ
 let savedFortuneTexts = ''; // useDefaultFortuneTexts切り替え前の内容を保持
 let hideOmikujiMessage = false; // 紙のおみくじを促すメッセージを非表示にするフラグ
+let testMode = false; // テストモード（zapなしでくじを引ける）
 let donateToOpenSats = false; // OpenSatsに寄付するフラグ
 let savedLightningAddress = ''; // donateToOpenSats切り替え前のアドレスを保持
 
@@ -92,6 +93,7 @@ onMount(() => {
     const storedFortuneTexts = localStorage.getItem('fortuneTexts') || '';
     useDefaultFortuneTexts = localStorage.getItem('useDefaultFortuneTexts') === 'true';
     hideOmikujiMessage = localStorage.getItem('hideOmikujiMessage') === 'true';
+    testMode = localStorage.getItem('testMode') === 'true';
     if (useDefaultFortuneTexts) {
       savedFortuneTexts = storedFortuneTexts;
       fortuneTexts = DEFAULT_FORTUNE_TEXTS;
@@ -165,6 +167,7 @@ function handleSave() {
     localStorage.setItem('useDefaultFortuneTexts', useDefaultFortuneTexts.toString());
     localStorage.setItem('fortuneTexts', useDefaultFortuneTexts ? savedFortuneTexts : fortuneTexts);
     localStorage.setItem('hideOmikujiMessage', hideOmikujiMessage.toString());
+    localStorage.setItem('testMode', testMode.toString());
 
     showSuccessMessage = true;
     setTimeout(() => {
@@ -201,6 +204,7 @@ function handleClearData() {
     localStorage.removeItem('fortuneTexts');
     localStorage.removeItem('useDefaultFortuneTexts');
     localStorage.removeItem('hideOmikujiMessage');
+    localStorage.removeItem('testMode');
     localStorage.removeItem('donateToOpenSats');
     // 旧データも削除（後方互換性のため）
     localStorage.removeItem('coinosId');
@@ -217,6 +221,7 @@ function handleClearData() {
     fortuneTexts = '';
     useDefaultFortuneTexts = false;
     hideOmikujiMessage = false;
+    testMode = false;
     donateToOpenSats = false;
 
     showDeleteMessage = true;
@@ -542,6 +547,19 @@ function handleClearData() {
             />
             <label for="hide-omikuji-message" class="ml-2 text-sm text-gray-700">
               紙のおみくじを促すメッセージを表示しない
+            </label>
+          </div>
+
+          <!-- テストモード -->
+          <div class="flex items-center mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+            <input
+              id="test-mode"
+              type="checkbox"
+              bind:checked={testMode}
+              class="h-4 w-4 text-yellow-600 border-gray-300 rounded focus:ring-yellow-500"
+            />
+            <label for="test-mode" class="ml-2 text-sm text-yellow-800">
+              テストモード（zapなしでくじを引ける）
             </label>
           </div>
         </div>

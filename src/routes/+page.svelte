@@ -54,6 +54,7 @@ let fortuneMax = 20; // くじの最大値
 let fortuneTexts: string[] = []; // くじの内容配列
 let fortuneTextForNumber: string | null = null; // 生成された数字に対応するテキスト
 let hideOmikujiMessage = false; // 紙のおみくじを促すメッセージを非表示にするフラグ
+let testMode = false; // zapせずにくじを引けるテストモード
 
 // 設定データを読み込み
 onMount(() => {
@@ -81,6 +82,7 @@ onMount(() => {
           .filter((t) => t)
       : [];
     hideOmikujiMessage = localStorage.getItem('hideOmikujiMessage') === 'true';
+    testMode = localStorage.getItem('testMode') === 'true';
   }
 });
 
@@ -196,6 +198,14 @@ function resetFortuneSlip() {
 async function generateQRCode() {
   clearMessages();
   resetFortuneSlip();
+
+  // テストモード: zapをスキップして直接くじを引く
+  if (testMode) {
+    randomNumber = generateLuckyNumber(fortuneMin, fortuneMax);
+    fortuneTextForNumber = getFortuneText(randomNumber, fortuneTexts);
+    isAnimationPlaying = true;
+    return;
+  }
 
   // 設定が不完全な場合は設定画面に誘導
   if (!lightningAddress || !nostrPrivateKey) {
