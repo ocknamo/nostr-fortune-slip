@@ -51,6 +51,7 @@ let fortuneMin = 1; // くじの最小値
 let fortuneMax = 20; // くじの最大値
 let fortuneTexts: string[] = []; // くじの内容配列
 let fortuneTextForNumber: string | null = null; // 生成された数字に対応するテキスト
+let hideOmikujiMessage = false; // 紙のおみくじを促すメッセージを非表示にするフラグ
 
 // 設定データを読み込み
 onMount(() => {
@@ -69,12 +70,15 @@ onMount(() => {
     const storedFortuneMax = localStorage.getItem('fortuneMax');
     fortuneMax = storedFortuneMax ? parseInt(storedFortuneMax, 10) : 20;
     const storedFortuneTexts = localStorage.getItem('fortuneTexts');
-    fortuneTexts = storedFortuneTexts
-      ? storedFortuneTexts
+    const useDefaultFortuneTexts = localStorage.getItem('useDefaultFortuneTexts') === 'true';
+    const fortuneTextsSource = useDefaultFortuneTexts ? '大吉,中吉,小吉,吉,末吉,凶,大凶' : (storedFortuneTexts || '');
+    fortuneTexts = fortuneTextsSource
+      ? fortuneTextsSource
           .split(',')
           .map((t) => t.trim())
           .filter((t) => t)
       : [];
+    hideOmikujiMessage = localStorage.getItem('hideOmikujiMessage') === 'true';
   }
 });
 
@@ -401,9 +405,11 @@ function handleAnimationComplete() {
           {/if}
         </div>
         <h3 class="text-2xl font-bold">All done!</h3>
+        {#if !hideOmikujiMessage}
         <p class="text-sm text-gray-600 text-center mb-4 mt-4 font-bold">
           Please take your<br/> numbered omikuji.
         </p>
+        {/if}
         <!-- もう一度ボタン -->
         <button
           on:click={resetFortuneSlip}

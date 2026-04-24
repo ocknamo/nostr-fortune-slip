@@ -18,6 +18,7 @@ let fortuneMax = 20; // くじの最大値
 let fortuneTexts = ''; // くじの内容（カンマ区切り）
 let useDefaultFortuneTexts = false; // デフォルトおみくじ内容を使用するフラグ
 let savedFortuneTexts = ''; // useDefaultFortuneTexts切り替え前の内容を保持
+let hideOmikujiMessage = false; // 紙のおみくじを促すメッセージを非表示にするフラグ
 let donateToOpenSats = false; // OpenSatsに寄付するフラグ
 let savedLightningAddress = ''; // donateToOpenSats切り替え前のアドレスを保持
 
@@ -90,6 +91,7 @@ onMount(() => {
     fortuneMax = storedFortuneMax ? parseInt(storedFortuneMax, 10) : 20;
     const storedFortuneTexts = localStorage.getItem('fortuneTexts') || '';
     useDefaultFortuneTexts = localStorage.getItem('useDefaultFortuneTexts') === 'true';
+    hideOmikujiMessage = localStorage.getItem('hideOmikujiMessage') === 'true';
     if (useDefaultFortuneTexts) {
       savedFortuneTexts = storedFortuneTexts;
       fortuneTexts = DEFAULT_FORTUNE_TEXTS;
@@ -162,6 +164,7 @@ function handleSave() {
     localStorage.setItem('fortuneMax', fortuneMax.toString());
     localStorage.setItem('useDefaultFortuneTexts', useDefaultFortuneTexts.toString());
     localStorage.setItem('fortuneTexts', useDefaultFortuneTexts ? savedFortuneTexts : fortuneTexts);
+    localStorage.setItem('hideOmikujiMessage', hideOmikujiMessage.toString());
 
     showSuccessMessage = true;
     setTimeout(() => {
@@ -197,6 +200,7 @@ function handleClearData() {
     localStorage.removeItem('fortuneMax');
     localStorage.removeItem('fortuneTexts');
     localStorage.removeItem('useDefaultFortuneTexts');
+    localStorage.removeItem('hideOmikujiMessage');
     localStorage.removeItem('donateToOpenSats');
     // 旧データも削除（後方互換性のため）
     localStorage.removeItem('coinosId');
@@ -212,6 +216,7 @@ function handleClearData() {
     fortuneMax = 20;
     fortuneTexts = '';
     useDefaultFortuneTexts = false;
+    hideOmikujiMessage = false;
     donateToOpenSats = false;
 
     showDeleteMessage = true;
@@ -525,6 +530,19 @@ function handleClearData() {
               カンマ区切りでおみくじの内容を入力します。空欄の場合は数字のみ表示されます。<br/>
               数字が配列の長さを超える場合は、循環して表示されます。
             </p>
+          </div>
+
+          <!-- おみくじメッセージ非表示設定 -->
+          <div class="flex items-center mt-4">
+            <input
+              id="hide-omikuji-message"
+              type="checkbox"
+              bind:checked={hideOmikujiMessage}
+              class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label for="hide-omikuji-message" class="ml-2 text-sm text-gray-700">
+              紙のおみくじを促すメッセージを表示しない
+            </label>
           </div>
         </div>
 
