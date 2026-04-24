@@ -16,6 +16,20 @@ let pinCode = ''; // PIN設定用
 let fortuneMin = 1; // くじの最小値
 let fortuneMax = 20; // くじの最大値
 let fortuneTexts = ''; // くじの内容（カンマ区切り）
+let donateToOpenSats = false; // OpenSatsに寄付するフラグ
+let savedLightningAddress = ''; // donateToOpenSats切り替え前のアドレスを保持
+
+const OPENSATS_ADDRESS = 'opensats@npub.cash';
+
+
+function handleDonateToOpenSatsChange() {
+  if (donateToOpenSats) {
+    savedLightningAddress = lightningAddress;
+    lightningAddress = OPENSATS_ADDRESS;
+  } else {
+    lightningAddress = savedLightningAddress;
+  }
+}
 
 // UI状態
 let showSuccessMessage = false;
@@ -44,7 +58,14 @@ onMount(() => {
     isAuthenticated = true;
 
     // 設定データを読み込み
-    lightningAddress = localStorage.getItem('lightningAddress') || '';
+    const storedLightningAddress = localStorage.getItem('lightningAddress') || '';
+    donateToOpenSats = localStorage.getItem('donateToOpenSats') === 'true';
+    if (donateToOpenSats) {
+      savedLightningAddress = storedLightningAddress;
+      lightningAddress = OPENSATS_ADDRESS;
+    } else {
+      lightningAddress = storedLightningAddress;
+    }
     nostrPrivateKey = localStorage.getItem('nostrPrivateKey') || '';
     coinosApiToken = localStorage.getItem('coinosApiToken') || '';
     const storedZapAmount = localStorage.getItem('zapAmount');
@@ -113,7 +134,8 @@ function validateForm(): boolean {
 // 保存処理
 function handleSave() {
   if (validateForm()) {
-    localStorage.setItem('lightningAddress', lightningAddress);
+    localStorage.setItem('donateToOpenSats', donateToOpenSats.toString());
+    localStorage.setItem('lightningAddress', donateToOpenSats ? savedLightningAddress : lightningAddress);
     localStorage.setItem('nostrPrivateKey', nostrPrivateKey);
     localStorage.setItem('coinosApiToken', coinosApiToken);
     localStorage.setItem('zapAmount', zapAmount.toString());
@@ -155,6 +177,7 @@ function handleClearData() {
     localStorage.removeItem('fortuneMin');
     localStorage.removeItem('fortuneMax');
     localStorage.removeItem('fortuneTexts');
+    localStorage.removeItem('donateToOpenSats');
     // 旧データも削除（後方互換性のため）
     localStorage.removeItem('coinosId');
     localStorage.removeItem('coinosPassword');
@@ -168,6 +191,7 @@ function handleClearData() {
     fortuneMin = 1;
     fortuneMax = 20;
     fortuneTexts = '';
+    donateToOpenSats = false;
 
     showDeleteMessage = true;
     setTimeout(() => {
@@ -268,6 +292,20 @@ function handleClearData() {
           {/if}
         </div>
 
+        <!-- OpenSatsに寄付する -->
+        <div class="flex items-center">
+          <input
+            id="donate-opensats"
+            type="checkbox"
+            bind:checked={donateToOpenSats}
+            on:change={handleDonateToOpenSatsChange}
+            class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+          />
+          <label for="donate-opensats" class="ml-2 block text-sm font-medium text-gray-700">
+            OpenSatsに寄付する
+          </label>
+        </div>
+
         <!-- ライトニングアドレス -->
         <div>
           <label for="lightning-address" class="block text-sm font-medium text-gray-700 mb-2">
@@ -278,8 +316,11 @@ function handleClearData() {
             type="email"
             bind:value={lightningAddress}
             placeholder="user@domain.com"
+            disabled={donateToOpenSats}
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             class:border-red-500={errors.lightningAddress}
+            class:bg-gray-100={donateToOpenSats}
+            class:cursor-not-allowed={donateToOpenSats}
           />
           {#if errors.lightningAddress}
             <p class="mt-1 text-sm text-red-600">{errors.lightningAddress}</p>
