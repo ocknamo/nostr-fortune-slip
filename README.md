@@ -1,4 +1,4 @@
-# Nostr Fortune Slip
+# Nostr Fortune Slip (Tokyo Bitcoin Base用)
 
 [![CI](https://github.com/ocknamo/nostr-fortune-slip/actions/workflows/ci.yml/badge.svg)](https://github.com/ocknamo/nostr-fortune-slip/actions/workflows/ci.yml)
 
