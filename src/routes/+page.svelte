@@ -74,7 +74,7 @@ onMount(() => {
     fortuneMax = storedFortuneMax ? parseInt(storedFortuneMax, 10) : 20;
     const storedFortuneTexts = localStorage.getItem('fortuneTexts');
     const useDefaultFortuneTexts = localStorage.getItem('useDefaultFortuneTexts') === 'true';
-    const fortuneTextsSource = useDefaultFortuneTexts ? '大吉,中吉,小吉,吉,末吉,凶,大凶' : (storedFortuneTexts || '');
+    const fortuneTextsSource = useDefaultFortuneTexts ? '大吉,中吉,小吉,吉,末吉,凶,大凶' : storedFortuneTexts || '';
     fortuneTexts = fortuneTextsSource
       ? fortuneTextsSource
           .split(',')
