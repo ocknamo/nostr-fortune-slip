@@ -14,3 +14,6 @@ export { generateLuckyNumber, getFortuneText } from './fortune.js';
 export { generateRandomBase64 } from './random.js';
 
 export { RELAYS, DEFAULT_RELAYS, getRelays, parseRelays, serializeRelays, validateRelayText } from './relay.js';
+
+// メタデータ取得関連をエクスポート
+export { decodeNpub, fetchMetadataFromRelays, validateNpub } from './metadata.js';

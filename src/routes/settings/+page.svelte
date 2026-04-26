@@ -10,6 +10,7 @@ import {
   DEFAULT_RELAYS,
   serializeRelays,
   validateRelayText,
+  validateNpub,
   validateForm as _validateForm,
   applyDefaultFortuneTexts,
   applyDonateToOpenSats,
@@ -31,6 +32,7 @@ let savedFortuneTexts = ''; // useDefaultFortuneTexts切り替え前の内容を
 let hideOmikujiMessage = false; // 紙のおみくじを促すメッセージを非表示にするフラグ
 let testMode = false; // テストモード（zapなしでくじを引ける）
 let relaysText = serializeRelays(DEFAULT_RELAYS); // リレー設定（改行区切り）
+let zapRecipientNpub = ''; // Zap先の公開鍵（npub形式、任意）
 let donateToOpenSats = false; // OpenSatsに寄付するフラグ
 let savedLightningAddress = ''; // donateToOpenSats切り替え前のアドレスを保持
 
@@ -98,6 +100,7 @@ onMount(() => {
     testMode = localStorage.getItem('testMode') === 'true';
     const storedRelays = localStorage.getItem('relays');
     relaysText = storedRelays || serializeRelays(DEFAULT_RELAYS);
+    zapRecipientNpub = localStorage.getItem('zapRecipientNpub') || '';
     if (useDefaultFortuneTexts) {
       savedFortuneTexts = storedFortuneTexts;
       fortuneTexts = DEFAULT_FORTUNE_TEXTS;
@@ -109,10 +112,18 @@ onMount(() => {
 
 // バリデーション関数
 function validateForm(): boolean {
-  errors = _validateForm({ lightningAddress, nostrPrivateKey, pinCode, zapAmount, fortuneMin, fortuneMax }, testMode);
+  const hasNpub = !!zapRecipientNpub.trim();
+  errors = _validateForm(
+    { lightningAddress, nostrPrivateKey, pinCode, zapAmount, fortuneMin, fortuneMax },
+    { skipLightningAddress: testMode || hasNpub, skipNostrKey: testMode },
+  );
   const relayError = validateRelayText(relaysText);
   if (relayError) {
     errors.relays = relayError;
+  }
+  const npubError = validateNpub(zapRecipientNpub);
+  if (npubError) {
+    errors.zapRecipientNpub = npubError;
   }
   return Object.keys(errors).length === 0;
 }
@@ -131,6 +142,7 @@ function handleSave() {
     localStorage.setItem('useDefaultFortuneTexts', useDefaultFortuneTexts.toString());
     localStorage.setItem('fortuneTexts', useDefaultFortuneTexts ? savedFortuneTexts : fortuneTexts);
     localStorage.setItem('relays', relaysText);
+    localStorage.setItem('zapRecipientNpub', zapRecipientNpub.trim());
     localStorage.setItem('hideOmikujiMessage', hideOmikujiMessage.toString());
     localStorage.setItem('testMode', testMode.toString());
 
@@ -172,6 +184,7 @@ function handleClearData() {
     localStorage.removeItem('testMode');
     localStorage.removeItem('donateToOpenSats');
     localStorage.removeItem('relays');
+    localStorage.removeItem('zapRecipientNpub');
     // 旧データも削除（後方互換性のため）
     localStorage.removeItem('coinosId');
     localStorage.removeItem('coinosPassword');
@@ -190,6 +203,7 @@ function handleClearData() {
     testMode = false;
     donateToOpenSats = false;
     relaysText = serializeRelays(DEFAULT_RELAYS);
+    zapRecipientNpub = '';
 
     showDeleteMessage = true;
     setTimeout(() => {
@@ -290,13 +304,37 @@ function handleClearData() {
           {/if}
         </div>
 
+        <!-- Zap先の公開鍵 -->
+        <div>
+          <label for="zap-recipient-npub" class="block text-sm font-medium text-gray-700 mb-2">
+            Zap先の公開鍵（npub形式・任意）
+          </label>
+          <input
+            id="zap-recipient-npub"
+            type="text"
+            bind:value={zapRecipientNpub}
+            placeholder="npub1..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+            class:border-red-500={errors.zapRecipientNpub}
+          />
+          {#if errors.zapRecipientNpub}
+            <p class="mt-1 text-sm text-red-600">{errors.zapRecipientNpub}</p>
+          {:else}
+            <p class="mt-1 text-sm text-gray-500">
+              Nostr公開鍵のkind:0からlud16を取得してZapします。
+              未設定の場合は下のライトニングアドレスとNostr秘密鍵が使われます。
+            </p>
+          {/if}
+        </div>
+
         <!-- OpenSatsに寄付する -->
-        <div class="flex items-center">
+        <div class="flex items-center" class:opacity-40={zapRecipientNpub.trim()}>
           <input
             id="donate-opensats"
             type="checkbox"
             bind:checked={donateToOpenSats}
             on:change={handleDonateToOpenSatsChange}
+            disabled={!!zapRecipientNpub.trim()}
             class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
           />
           <label for="donate-opensats" class="ml-2 block text-sm font-medium text-gray-700">
@@ -305,7 +343,7 @@ function handleClearData() {
         </div>
 
         <!-- ライトニングアドレス -->
-        <div>
+        <div class:opacity-40={zapRecipientNpub.trim()}>
           <label for="lightning-address" class="block text-sm font-medium text-gray-700 mb-2">
             ライトニングアドレス
             {#if testMode}<span class="ml-1 text-xs font-normal text-gray-400">（テストモード時は任意）</span>{/if}
@@ -315,11 +353,11 @@ function handleClearData() {
             type="email"
             bind:value={lightningAddress}
             placeholder="user@domain.com"
-            disabled={donateToOpenSats}
+            disabled={donateToOpenSats || !!zapRecipientNpub.trim()}
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             class:border-red-500={errors.lightningAddress}
-            class:bg-gray-100={donateToOpenSats}
-            class:cursor-not-allowed={donateToOpenSats}
+            class:bg-gray-100={donateToOpenSats || !!zapRecipientNpub.trim()}
+            class:cursor-not-allowed={donateToOpenSats || !!zapRecipientNpub.trim()}
           />
           {#if errors.lightningAddress}
             <p class="mt-1 text-sm text-red-600">{errors.lightningAddress}</p>

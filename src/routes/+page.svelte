@@ -7,6 +7,8 @@ import OmikujiAnimation from '$lib/components/OmikujiAnimation.svelte';
 import LightningReveal from '$lib/components/LightningReveal.svelte';
 import {
   decodeNsec,
+  decodeNpub,
+  fetchMetadataFromRelays,
   createTextEvent,
   createZapRequest,
   createMetadataEvent,
@@ -55,6 +57,7 @@ let fortuneTexts: string[] = []; // くじの内容配列
 let fortuneTextForNumber: string | null = null; // 生成された数字に対応するテキスト
 let hideOmikujiMessage = false; // 紙のおみくじを促すメッセージを非表示にするフラグ
 let testMode = false; // zapせずにくじを引けるテストモード
+let zapRecipientNpub = ''; // Zap先の公開鍵（npub形式、任意）
 
 // 設定データを読み込み
 onMount(() => {
@@ -83,6 +86,7 @@ onMount(() => {
       : [];
     hideOmikujiMessage = localStorage.getItem('hideOmikujiMessage') === 'true';
     testMode = localStorage.getItem('testMode') === 'true';
+    zapRecipientNpub = localStorage.getItem('zapRecipientNpub') || '';
   }
 });
 
@@ -205,8 +209,13 @@ async function generateQRCode() {
   }
 
   // 設定が不完全な場合は設定画面に誘導
-  if (!lightningAddress || !nostrPrivateKey) {
-    errorMessage = '設定が不完全です。まず設定画面でライトニングアドレスとNostr秘密鍵を入力してください。';
+  if (!zapRecipientNpub && (!lightningAddress || !nostrPrivateKey)) {
+    errorMessage = '設定が不完全です。Zap先の公開鍵、またはライトニングアドレスとNostr秘密鍵を設定してください。';
+    return;
+  }
+
+  if (!nostrPrivateKey) {
+    errorMessage = '設定が不完全です。Nostr秘密鍵を設定してください。';
     return;
   }
 
@@ -216,19 +225,35 @@ async function generateQRCode() {
     // 1. Nostr秘密鍵をデコード
     const privateKeyBytes = decodeNsec(nostrPrivateKey);
 
-    // 2. Nostr kind 1イベントを作成・送信
+    // 2. Nostr kind 1イベントを作成
     const textEvent = createTextEvent(privateKeyBytes, '');
 
-    // 3. recipientのmetadata eventを作成（簡易版）
-    // 実際のアプリではリレーから取得するが、ここでは設定値から作成
-    const recipientPubkey = textEvent.pubkey; // 自分自身にzapする場合
-    const metadataEvent = createMetadataEvent(recipientPubkey, lightningAddress);
+    // 3. Zap先のmetadata eventを取得・作成
+    let metadataEvent: NostrEvent;
+
+    if (zapRecipientNpub.trim()) {
+      // npub設定がある場合: リレーからkind:0を取得してlud16を使う
+      const recipientPubkeyHex = decodeNpub(zapRecipientNpub.trim());
+      console.log('[Fortune Slip] Fetching metadata for npub:', zapRecipientNpub);
+      const metadata = await fetchMetadataFromRelays(recipientPubkeyHex);
+      if (!metadata || !metadata.lud16) {
+        errorMessage = 'Zap先のメタデータからlud16（ライトニングアドレス）が見つかりませんでした。';
+        isLoading = false;
+        return;
+      }
+      console.log('[Fortune Slip] Found lud16:', metadata.lud16);
+      metadataEvent = createMetadataEvent(recipientPubkeyHex, metadata.lud16);
+    } else {
+      // 従来の方式: 自分のライトニングアドレスを使う
+      const recipientPubkey = textEvent.pubkey;
+      metadataEvent = createMetadataEvent(recipientPubkey, lightningAddress);
+    }
 
     // 4. zapUrl取得
     const zapUrl = await nip57.getZapEndpoint(metadataEvent);
     if (zapUrl === null) {
-      errorMessage = `Zapエンドポイントが見つかりません。ライトニングアドレス: ${lightningAddress}`;
-      throw new Error(`Zapエンドポイントが見つかりません。ライトニングアドレス: ${lightningAddress}`);
+      errorMessage = 'Zapエンドポイントが見つかりません。';
+      throw new Error('Zapエンドポイントが見つかりません。');
     }
 
     console.debug('[zap endpoint]', zapUrl);
