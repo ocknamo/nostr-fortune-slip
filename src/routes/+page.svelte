@@ -127,9 +127,6 @@ async function onZapDetected(zapReceipt: NostrEvent) {
     return;
   }
 
-  // 早期にフラグを立てて二重実行を防ぐ
-  zapDetected = true;
-
   console.log('[Fortune Slip] Zap detected!', zapReceipt);
 
   // coinosへのポーリングを停止
@@ -141,8 +138,10 @@ async function onZapDetected(zapReceipt: NostrEvent) {
   randomNumber = generateLuckyNumber(fortuneMin, fortuneMax);
   // おみくじテキストを取得
   fortuneTextForNumber = getFortuneText(randomNumber, fortuneTexts);
-  // アニメーション表示を開始
+  // アニメーション開始を先にセットしてからzapDetectedを立てる
+  // (zapDetected=trueかつisAnimationPlaying=falseだと結果画面が先に表示されてしまうため)
   isAnimationPlaying = true;
+  zapDetected = true;
   stopZapMonitoring();
 }
 
@@ -162,9 +161,6 @@ async function onCoinosPaymentDetected(payment: any) {
     return;
   }
 
-  // 早期にフラグを立てて二重実行を防ぐ
-  zapDetected = true;
-
   console.log('[Fortune Slip] Coinos payment detected!', payment);
 
   // QRコードを非表示
@@ -173,8 +169,9 @@ async function onCoinosPaymentDetected(payment: any) {
   randomNumber = generateLuckyNumber(fortuneMin, fortuneMax);
   // おみくじテキストを取得
   fortuneTextForNumber = getFortuneText(randomNumber, fortuneTexts);
-  // アニメーション表示を開始
+  // アニメーション開始を先にセットしてからzapDetectedを立てる
   isAnimationPlaying = true;
+  zapDetected = true;
   stopZapMonitoring();
 }
 
