@@ -1,3 +1,5 @@
+export { DEFAULT_RELAYS, serializeRelays, validateRelayText } from '$lib/nostr/relay.js';
+
 export const OPENSATS_ADDRESS = 'opensats@npub.cash';
 export const DEFAULT_FORTUNE_TEXTS = '大吉,中吉,小吉,吉,末吉,凶,大凶';
 

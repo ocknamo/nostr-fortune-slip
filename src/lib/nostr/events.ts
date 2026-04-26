@@ -1,6 +1,6 @@
 import { nip19, nip57, finalizeEvent, type EventTemplate } from 'nostr-tools';
 import type { NostrEvent, MetadataContent } from './types.js';
-import { RELAYS } from './relay.js';
+import { getRelays } from './relay.js';
 
 /**
  * nsec形式の秘密鍵をhex形式に変換
@@ -47,7 +47,7 @@ export function createZapRequest(
     event: targetEvent,
     amount: amount || 1000,
     comment: comment || '',
-    relays: RELAYS,
+    relays: getRelays(),
   });
 
   // テンプレートに署名してEventに変換

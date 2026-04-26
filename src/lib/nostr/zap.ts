@@ -1,7 +1,7 @@
 import { SimplePool } from 'nostr-tools';
 import type { Event, Filter } from 'nostr-tools';
 import type { NostrEvent, ZapReceiptSubscription } from './types.js';
-import { RELAYS } from './relay.js';
+import { getRelays } from './relay.js';
 import { verifyCoinosPayment } from '../coinos/index.js';
 
 /**
@@ -158,10 +158,12 @@ export function subscribeToZapReceipts(
   onZapError?: (error: string) => void, // エラーコールバック（オプション）
 ): ZapReceiptSubscription {
   const pool = new SimplePool();
+  const relays = getRelays();
   const subscriptionId = `zap-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
   console.log(`[Zap Monitor] Starting subscription for event: ${targetEventId}`);
   console.log(`[Zap Monitor] Coinos verification enabled:`, !!coinosApiToken);
+  console.log(`[Zap Monitor] Relays:`, relays);
 
   // フィルターを正しいFilter型で作成
   const filter: Filter = {
@@ -173,7 +175,7 @@ export function subscribeToZapReceipts(
   console.log(`[Zap Monitor] Filter:`, JSON.stringify(filter, null, 2));
 
   // サブスクリプション開始
-  const subscription = pool.subscribeMany(RELAYS, filter, {
+  const subscription = pool.subscribeMany(relays, filter, {
     onevent: async (event: Event) => {
       console.log(`[Zap Monitor] Received zap receipt:`, event);
 
@@ -226,7 +228,7 @@ export function subscribeToZapReceipts(
   const timeoutId = setTimeout(() => {
     console.log(`[Zap Monitor] Subscription timeout for event: ${targetEventId}`);
     subscription.close();
-    pool.close(RELAYS);
+    pool.close(relays);
   }, timeoutMs);
 
   // 停止関数
@@ -236,7 +238,7 @@ export function subscribeToZapReceipts(
     subscription.close();
     // 少し待ってからプールを閉じる
     setTimeout(() => {
-      pool.close(RELAYS);
+      pool.close(relays);
     }, 1000);
   };
 

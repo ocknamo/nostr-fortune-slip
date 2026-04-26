@@ -7,6 +7,9 @@ import backgroundImage from '$lib/assets/background.jpg';
 import {
   OPENSATS_ADDRESS,
   DEFAULT_FORTUNE_TEXTS,
+  DEFAULT_RELAYS,
+  serializeRelays,
+  validateRelayText,
   validateForm as _validateForm,
   applyDefaultFortuneTexts,
   applyDonateToOpenSats,
@@ -27,6 +30,7 @@ let useDefaultFortuneTexts = false; // デフォルトおみくじ内容を使�
 let savedFortuneTexts = ''; // useDefaultFortuneTexts切り替え前の内容を保持
 let hideOmikujiMessage = false; // 紙のおみくじを促すメッセージを非表示にするフラグ
 let testMode = false; // テストモード（zapなしでくじを引ける）
+let relaysText = serializeRelays(DEFAULT_RELAYS); // リレー設定（改行区切り）
 let donateToOpenSats = false; // OpenSatsに寄付するフラグ
 let savedLightningAddress = ''; // donateToOpenSats切り替え前のアドレスを保持
 
@@ -92,6 +96,8 @@ onMount(() => {
     useDefaultFortuneTexts = localStorage.getItem('useDefaultFortuneTexts') === 'true';
     hideOmikujiMessage = localStorage.getItem('hideOmikujiMessage') === 'true';
     testMode = localStorage.getItem('testMode') === 'true';
+    const storedRelays = localStorage.getItem('relays');
+    relaysText = storedRelays || serializeRelays(DEFAULT_RELAYS);
     if (useDefaultFortuneTexts) {
       savedFortuneTexts = storedFortuneTexts;
       fortuneTexts = DEFAULT_FORTUNE_TEXTS;
@@ -104,6 +110,10 @@ onMount(() => {
 // バリデーション関数
 function validateForm(): boolean {
   errors = _validateForm({ lightningAddress, nostrPrivateKey, pinCode, zapAmount, fortuneMin, fortuneMax }, testMode);
+  const relayError = validateRelayText(relaysText);
+  if (relayError) {
+    errors.relays = relayError;
+  }
   return Object.keys(errors).length === 0;
 }
 
@@ -120,6 +130,7 @@ function handleSave() {
     localStorage.setItem('fortuneMax', fortuneMax.toString());
     localStorage.setItem('useDefaultFortuneTexts', useDefaultFortuneTexts.toString());
     localStorage.setItem('fortuneTexts', useDefaultFortuneTexts ? savedFortuneTexts : fortuneTexts);
+    localStorage.setItem('relays', relaysText);
     localStorage.setItem('hideOmikujiMessage', hideOmikujiMessage.toString());
     localStorage.setItem('testMode', testMode.toString());
 
@@ -160,6 +171,7 @@ function handleClearData() {
     localStorage.removeItem('hideOmikujiMessage');
     localStorage.removeItem('testMode');
     localStorage.removeItem('donateToOpenSats');
+    localStorage.removeItem('relays');
     // 旧データも削除（後方互換性のため）
     localStorage.removeItem('coinosId');
     localStorage.removeItem('coinosPassword');
@@ -177,6 +189,7 @@ function handleClearData() {
     hideOmikujiMessage = false;
     testMode = false;
     donateToOpenSats = false;
+    relaysText = serializeRelays(DEFAULT_RELAYS);
 
     showDeleteMessage = true;
     setTimeout(() => {
@@ -409,6 +422,36 @@ function handleClearData() {
           {:else}
             <p class="mt-1 text-sm text-gray-500">おみくじを引くために必要なZap金額（1〜1000 sats）</p>
           {/if}
+        </div>
+
+        <!-- リレー設定 -->
+        <div class="border-t pt-6">
+          <h2 class="text-lg font-semibold text-gray-900 mb-4">リレー設定</h2>
+          <div>
+            <label for="relays-text" class="block text-sm font-medium text-gray-700 mb-2">
+              Nostrリレー（1行に1つ）
+            </label>
+            <textarea
+              id="relays-text"
+              bind:value={relaysText}
+              rows="5"
+              placeholder="wss://relay.damus.io/"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+              class:border-red-500={errors.relays}
+            ></textarea>
+            {#if errors.relays}
+              <p class="mt-1 text-sm text-red-600">{errors.relays}</p>
+            {:else}
+              <p class="mt-1 text-sm text-gray-500">Zap Receipt の監視に使用するリレーを設定します</p>
+            {/if}
+            <button
+              type="button"
+              on:click={() => { relaysText = serializeRelays(DEFAULT_RELAYS); }}
+              class="mt-2 text-sm text-blue-600 hover:text-blue-800 underline"
+            >
+              デフォルトに戻す
+            </button>
+          </div>
         </div>
 
         <!-- くじの範囲設定 -->
