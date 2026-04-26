@@ -132,12 +132,13 @@ export async function verifyCoinosPayment(
     }
 
     // Coinos APIから支払い履歴を取得
-    const paymentsData = await getCoinosPayments(token, 10); // 最大10件取得
+    const paymentsData = await getCoinosPayments(token, 50);
 
     // Zapレシートの作成時刻を基準にした時間窓を設定
+    // 支払いはZap Receiptより前に発生するため、窓は過去方向に開く
     const zapTimestamp = zapReceipt.created_at * 1000; // ミリ秒に変換
-    const windowStart = zapTimestamp;
-    const windowEnd = zapTimestamp + timeWindowMs;
+    const windowStart = zapTimestamp - timeWindowMs;
+    const windowEnd = zapTimestamp + 60000; // 1分の余裕
 
     console.debug('[Coinos Verification] Looking for payment with preimage:', zapData.preimage);
     console.debug('[Coinos Verification] Time window:', new Date(windowStart), 'to', new Date(windowEnd));
@@ -149,10 +150,10 @@ export async function verifyCoinosPayment(
         return false;
       }
 
-      // 時間窓内の支払いかチェック
-      const paymentTime = payment.created;
-      if (paymentTime < windowStart || paymentTime > windowEnd) {
-        console.debug('[Coinos Verification] Payment time outside window:', new Date(paymentTime));
+      // 時間窓内の支払いかチェック（created は Unix秒の場合とミリ秒の場合がある）
+      const paymentTimeMs = payment.created < 1e12 ? payment.created * 1000 : payment.created;
+      if (paymentTimeMs < windowStart || paymentTimeMs > windowEnd) {
+        console.debug('[Coinos Verification] Payment time outside window:', new Date(paymentTimeMs));
         return false;
       }
 

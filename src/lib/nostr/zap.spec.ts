@@ -436,11 +436,13 @@ describe('subscribeToZapReceipts', () => {
 
     expect(mockPoolInstance.subscribeMany).toHaveBeenCalledWith(
       expect.any(Array), // relays
-      expect.objectContaining({
-        kinds: [9735],
-        '#e': [targetEventId],
-        since: expect.any(Number),
-      }),
+      [
+        expect.objectContaining({
+          kinds: [9735],
+          '#e': [targetEventId],
+          since: expect.any(Number),
+        }),
+      ],
       expect.objectContaining({
         onevent: expect.any(Function),
         oneose: expect.any(Function),

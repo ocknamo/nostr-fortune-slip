@@ -166,7 +166,7 @@ export function subscribeToZapReceipts(
   // フィルターを正しいFilter型で作成
   const filter: Filter = {
     kinds: [9735],
-    since: Math.floor(Date.now() / 1000) - 60,
+    since: Math.floor(Date.now() / 1000) - 300,
     '#e': [targetEventId], // Filter型のindex signatureを使用
   };
 
@@ -175,7 +175,7 @@ export function subscribeToZapReceipts(
   // サブスクリプション開始 - 正しい型を使用
   const subscription = pool.subscribeMany(
     RELAYS,
-    filter, // 単一のFilterオブジェクト
+    [filter],
     {
       onevent: async (event: Event) => {
         console.log(`[Zap Monitor] Received zap receipt:`, event);
