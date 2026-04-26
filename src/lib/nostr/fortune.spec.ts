@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { generateLuckyNumber, extractZapperPubkey, getFortuneText } from './fortune.js';
+import { generateLuckyNumber, extractZapperPubkey, getFortuneText, shouldShowConfetti } from './fortune.js';
 import type { NostrEvent } from './types.js';
 
 // Mock nostr-tools
@@ -56,6 +56,32 @@ describe('getFortuneText', () => {
 
     expect(getFortuneText(100, fortuneTexts)).toBe('A'); // (100-1) % 3 = 0
     expect(getFortuneText(101, fortuneTexts)).toBe('B'); // (101-1) % 3 = 1
+  });
+});
+
+describe('shouldShowConfetti', () => {
+  it('紙吹雪テキスト配列に含まれる場合trueを返す', () => {
+    const confettiTexts = ['大吉', '中吉', '小吉', '吉', '末吉'];
+    expect(shouldShowConfetti('大吉', confettiTexts)).toBe(true);
+    expect(shouldShowConfetti('末吉', confettiTexts)).toBe(true);
+  });
+
+  it('紙吹雪テキスト配列に含まれない場合falseを返す', () => {
+    const confettiTexts = ['大吉', '中吉', '小吉', '吉', '末吉'];
+    expect(shouldShowConfetti('凶', confettiTexts)).toBe(false);
+    expect(shouldShowConfetti('大凶', confettiTexts)).toBe(false);
+  });
+
+  it('紙吹雪テキスト配列が空の場合falseを返す', () => {
+    expect(shouldShowConfetti('大吉', [])).toBe(false);
+  });
+
+  it('テキストがnullの場合falseを返す', () => {
+    expect(shouldShowConfetti(null, ['大吉'])).toBe(false);
+  });
+
+  it('テキストが空文字の場合falseを返す', () => {
+    expect(shouldShowConfetti('', ['大吉'])).toBe(false);
   });
 });
 

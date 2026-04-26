@@ -7,6 +7,8 @@ import backgroundImage from '$lib/assets/background.jpg';
 import {
   OPENSATS_ADDRESS,
   DEFAULT_FORTUNE_TEXTS,
+  DEFAULT_CONFETTI_TEXTS,
+  DEFAULT_NO_CONFETTI_TEXTS,
   DEFAULT_RELAYS,
   serializeRelays,
   validateRelayText,
@@ -28,9 +30,13 @@ let showPin = false; // PIN表示切り替え
 let pinCode = ''; // PIN設定用
 let fortuneMin = 1; // くじの最小値
 let fortuneMax = 20; // くじの最大値
-let fortuneTexts = ''; // くじの内容（カンマ区切り）
+let fortuneTexts = ''; // くじの内容（カンマ区切り）- 後方互換用
+let confettiFortuneTexts = ''; // 紙吹雪を表示するおみくじ内容
+let noConfettiFortuneTexts = ''; // 紙吹雪を表示しないおみくじ内容
 let useDefaultFortuneTexts = false; // デフォルトおみくじ内容を使用するフラグ
-let savedFortuneTexts = ''; // useDefaultFortuneTexts切り替え前の内容を保持
+let savedConfettiTexts = ''; // デフォルト切り替え前の保持
+let savedNoConfettiTexts = ''; // デフォルト切り替え前の保持
+let savedFortuneTexts = ''; // useDefaultFortuneTexts切り替え前の内容を保持（後方互換）
 let hideOmikujiMessage = false; // 紙のおみくじを促すメッセージを非表示にするフラグ
 let testMode = false; // テストモード（zapなしでくじを引ける）
 let relaysText = serializeRelays(DEFAULT_RELAYS); // リレー設定（改行区切り）
@@ -39,9 +45,17 @@ let donateToOpenSats = false; // OpenSatsに寄付するフラグ
 let savedLightningAddress = ''; // donateToOpenSats切り替え前のアドレスを保持
 
 function handleUseDefaultFortuneTextsChange() {
-  const result = applyDefaultFortuneTexts(useDefaultFortuneTexts, fortuneTexts, savedFortuneTexts);
-  fortuneTexts = result.fortuneTexts;
-  savedFortuneTexts = result.savedFortuneTexts;
+  if (useDefaultFortuneTexts) {
+    savedConfettiTexts = confettiFortuneTexts;
+    savedNoConfettiTexts = noConfettiFortuneTexts;
+    confettiFortuneTexts = DEFAULT_CONFETTI_TEXTS;
+    noConfettiFortuneTexts = DEFAULT_NO_CONFETTI_TEXTS;
+  } else {
+    confettiFortuneTexts = savedConfettiTexts;
+    noConfettiFortuneTexts = savedNoConfettiTexts;
+  }
+  // 後方互換: fortuneTextsも更新
+  fortuneTexts = [confettiFortuneTexts, noConfettiFortuneTexts].filter(Boolean).join(',');
 }
 
 function handleDonateToOpenSatsChange() {
@@ -124,11 +138,19 @@ onMount(() => {
     }
     syncRelaysWithNip65 = localStorage.getItem('syncRelaysWithNip65') === 'true';
 
+    // 紙吹雪テキスト読み込み
+    const storedConfetti = localStorage.getItem('confettiFortuneTexts');
+    const storedNoConfetti = localStorage.getItem('noConfettiFortuneTexts');
     if (useDefaultFortuneTexts) {
-      savedFortuneTexts = storedFortuneTexts;
+      savedConfettiTexts = storedConfetti || '';
+      savedNoConfettiTexts = storedNoConfetti || '';
+      confettiFortuneTexts = DEFAULT_CONFETTI_TEXTS;
+      noConfettiFortuneTexts = DEFAULT_NO_CONFETTI_TEXTS;
       fortuneTexts = DEFAULT_FORTUNE_TEXTS;
     } else {
-      fortuneTexts = storedFortuneTexts;
+      confettiFortuneTexts = storedConfetti ?? DEFAULT_CONFETTI_TEXTS;
+      noConfettiFortuneTexts = storedNoConfetti ?? DEFAULT_NO_CONFETTI_TEXTS;
+      fortuneTexts = storedFortuneTexts || [confettiFortuneTexts, noConfettiFortuneTexts].filter(Boolean).join(',');
     }
   }
 });
@@ -217,7 +239,12 @@ function handleSave() {
     localStorage.setItem('fortuneMin', fortuneMin.toString());
     localStorage.setItem('fortuneMax', fortuneMax.toString());
     localStorage.setItem('useDefaultFortuneTexts', useDefaultFortuneTexts.toString());
-    localStorage.setItem('fortuneTexts', useDefaultFortuneTexts ? savedFortuneTexts : fortuneTexts);
+    const saveConfetti = useDefaultFortuneTexts ? savedConfettiTexts : confettiFortuneTexts;
+    const saveNoConfetti = useDefaultFortuneTexts ? savedNoConfettiTexts : noConfettiFortuneTexts;
+    localStorage.setItem('confettiFortuneTexts', saveConfetti);
+    localStorage.setItem('noConfettiFortuneTexts', saveNoConfetti);
+    // 後方互換: fortuneTextsも保存
+    localStorage.setItem('fortuneTexts', [saveConfetti, saveNoConfetti].filter(Boolean).join(','));
     localStorage.setItem('relays', relaysText);
     localStorage.setItem('syncRelaysWithNip65', syncRelaysWithNip65.toString());
     localStorage.setItem('zapRecipientNpub', zapRecipientNpub.trim());
@@ -260,6 +287,8 @@ function handleClearData() {
     localStorage.removeItem('fortuneMin');
     localStorage.removeItem('fortuneMax');
     localStorage.removeItem('fortuneTexts');
+    localStorage.removeItem('confettiFortuneTexts');
+    localStorage.removeItem('noConfettiFortuneTexts');
     localStorage.removeItem('useDefaultFortuneTexts');
     localStorage.removeItem('hideOmikujiMessage');
     localStorage.removeItem('testMode');
@@ -281,6 +310,8 @@ function handleClearData() {
     fortuneMin = 1;
     fortuneMax = 20;
     fortuneTexts = '';
+    confettiFortuneTexts = '';
+    noConfettiFortuneTexts = '';
     useDefaultFortuneTexts = false;
     hideOmikujiMessage = false;
     testMode = false;
@@ -701,8 +732,8 @@ function handleClearData() {
           <!-- おみくじ内容 -->
           <div>
             <div class="flex items-center justify-between mb-2">
-              <label for="fortune-texts" class="block text-sm font-medium text-gray-700">
-                おみくじの内容（オプション）
+              <label class="block text-sm font-medium text-gray-700">
+                おみくじの内容
               </label>
               <div class="flex items-center">
                 <input
@@ -717,19 +748,43 @@ function handleClearData() {
                 </label>
               </div>
             </div>
-            <textarea
-              id="fortune-texts"
-              bind:value={fortuneTexts}
-              placeholder="大吉,中吉,小吉,吉,末吉,凶,大凶"
-              rows="3"
-              disabled={useDefaultFortuneTexts}
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              class:bg-gray-100={useDefaultFortuneTexts}
-              class:cursor-not-allowed={useDefaultFortuneTexts}
-            ></textarea>
+
+            <!-- 紙吹雪あり -->
+            <div class="mb-3">
+              <label for="confetti-fortune-texts" class="block text-xs font-medium text-gray-600 mb-1">
+                紙吹雪を表示する内容（カンマ区切り）
+              </label>
+              <textarea
+                id="confetti-fortune-texts"
+                bind:value={confettiFortuneTexts}
+                placeholder="大吉,中吉,小吉,吉,末吉"
+                rows="2"
+                disabled={useDefaultFortuneTexts}
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                class:bg-gray-100={useDefaultFortuneTexts}
+                class:cursor-not-allowed={useDefaultFortuneTexts}
+              ></textarea>
+            </div>
+
+            <!-- 紙吹雪なし -->
+            <div class="mb-2">
+              <label for="no-confetti-fortune-texts" class="block text-xs font-medium text-gray-600 mb-1">
+                紙吹雪を表示しない内容（カンマ区切り）
+              </label>
+              <textarea
+                id="no-confetti-fortune-texts"
+                bind:value={noConfettiFortuneTexts}
+                placeholder="凶,大凶"
+                rows="2"
+                disabled={useDefaultFortuneTexts}
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                class:bg-gray-100={useDefaultFortuneTexts}
+                class:cursor-not-allowed={useDefaultFortuneTexts}
+              ></textarea>
+            </div>
+
             <p class="mt-1 text-sm text-gray-500">
-              カンマ区切りでおみくじの内容を入力します。空欄の場合は数字のみ表示されます。<br/>
-              数字が配列の長さを超える場合は、循環して表示されます。
+              両方を合わせた配列がおみくじ結果になります。数字が配列の長さを超える場合は循環します。
             </p>
           </div>
 

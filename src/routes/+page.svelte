@@ -22,6 +22,7 @@ import {
   generateLuckyNumber,
   generateRandomBase64,
   getFortuneText,
+  shouldShowConfetti,
 } from '$lib/nostr';
 import { generateLightningQRCode } from '$lib/qrcode';
 import { nip57 } from 'nostr-tools';
@@ -57,7 +58,9 @@ let zapAmount = 100; // Zap金額（sats）デフォルト値
 let fortuneMin = 1; // くじの最小値
 let fortuneMax = 20; // くじの最大値
 let fortuneTexts: string[] = []; // くじの内容配列
+let confettiTexts: string[] = []; // 紙吹雪を表示するテキスト配列
 let fortuneTextForNumber: string | null = null; // 生成された数字に対応するテキスト
+let showConfettiForResult = true; // 結果に紙吹雪を表示するか
 let hideOmikujiMessage = false; // 紙のおみくじを促すメッセージを非表示にするフラグ
 let testMode = false; // zapせずにくじを引けるテストモード
 let zapRecipientNpub = ''; // Zap先の公開鍵（npub形式、任意）
@@ -79,15 +82,22 @@ onMount(() => {
     fortuneMin = storedFortuneMin ? parseInt(storedFortuneMin, 10) : 1;
     const storedFortuneMax = localStorage.getItem('fortuneMax');
     fortuneMax = storedFortuneMax ? parseInt(storedFortuneMax, 10) : 20;
-    const storedFortuneTexts = localStorage.getItem('fortuneTexts');
     const useDefaultFortuneTexts = localStorage.getItem('useDefaultFortuneTexts') === 'true';
-    const fortuneTextsSource = useDefaultFortuneTexts ? '大吉,中吉,小吉,吉,末吉,凶,大凶' : storedFortuneTexts || '';
-    fortuneTexts = fortuneTextsSource
-      ? fortuneTextsSource
-          .split(',')
-          .map((t) => t.trim())
-          .filter((t) => t)
-      : [];
+    const confettiSrc = useDefaultFortuneTexts
+      ? '大吉,中吉,小吉,吉,末吉'
+      : localStorage.getItem('confettiFortuneTexts') || '大吉,中吉,小吉,吉,末吉';
+    const noConfettiSrc = useDefaultFortuneTexts
+      ? '凶,大凶'
+      : localStorage.getItem('noConfettiFortuneTexts') || '凶,大凶';
+    confettiTexts = confettiSrc
+      .split(',')
+      .map((t) => t.trim())
+      .filter((t) => t);
+    const noConfettiTexts = noConfettiSrc
+      .split(',')
+      .map((t) => t.trim())
+      .filter((t) => t);
+    fortuneTexts = [...confettiTexts, ...noConfettiTexts];
     hideOmikujiMessage = localStorage.getItem('hideOmikujiMessage') === 'true';
     testMode = localStorage.getItem('testMode') === 'true';
     zapRecipientNpub = localStorage.getItem('zapRecipientNpub') || '';
@@ -147,6 +157,7 @@ async function onZapDetected(zapReceipt: NostrEvent) {
   randomNumber = generateLuckyNumber(fortuneMin, fortuneMax);
   // おみくじテキストを取得
   fortuneTextForNumber = getFortuneText(randomNumber, fortuneTexts);
+  showConfettiForResult = shouldShowConfetti(fortuneTextForNumber, confettiTexts);
   // アニメーション開始を先にセットしてからzapDetectedを立てる
   // (zapDetected=trueかつisAnimationPlaying=falseだと結果画面が先に表示されてしまうため)
   isAnimationPlaying = true;
@@ -178,6 +189,7 @@ async function onCoinosPaymentDetected(payment: any) {
   randomNumber = generateLuckyNumber(fortuneMin, fortuneMax);
   // おみくじテキストを取得
   fortuneTextForNumber = getFortuneText(randomNumber, fortuneTexts);
+  showConfettiForResult = shouldShowConfetti(fortuneTextForNumber, confettiTexts);
   // アニメーション開始を先にセットしてからzapDetectedを立てる
   isAnimationPlaying = true;
   zapDetected = true;
@@ -209,6 +221,7 @@ async function generateQRCode() {
   if (testMode) {
     randomNumber = generateLuckyNumber(fortuneMin, fortuneMax);
     fortuneTextForNumber = getFortuneText(randomNumber, fortuneTexts);
+    showConfettiForResult = shouldShowConfetti(fortuneTextForNumber, confettiTexts);
     isAnimationPlaying = true;
     return;
   }
@@ -449,7 +462,7 @@ function startAutoReset() {
 
       <!-- 稲妻演出 -->
       {#if isLightningPlaying}
-        <LightningReveal text={fortuneTextForNumber ?? ''} onComplete={handleLightningComplete} />
+        <LightningReveal text={fortuneTextForNumber ?? ''} showConfetti={showConfettiForResult} onComplete={handleLightningComplete} />
       {/if}
 
       <!-- Zap検知後のランダム数字表示 -->

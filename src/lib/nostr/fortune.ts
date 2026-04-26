@@ -23,6 +23,14 @@ export function getFortuneText(luckyNumber: number, fortuneTexts: string[]): str
 }
 
 /**
+ * おみくじ結果が紙吹雪を表示すべきかどうか判定
+ */
+export function shouldShowConfetti(text: string | null, confettiTexts: string[]): boolean {
+  if (!text || confettiTexts.length === 0) return false;
+  return confettiTexts.includes(text);
+}
+
+/**
  * ZapレシートからZapした人の公開鍵を取得
  */
 export function extractZapperPubkey(zapReceipt: NostrEvent): string | null {

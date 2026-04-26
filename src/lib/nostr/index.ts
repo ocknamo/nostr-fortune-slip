@@ -24,7 +24,7 @@ export {
 export { getZapInvoiceFromEndpoint, validateZapReceipt, subscribeToZapReceipts } from './zap.js';
 
 // Fortune機能をエクスポート
-export { generateLuckyNumber, getFortuneText } from './fortune.js';
+export { generateLuckyNumber, getFortuneText, shouldShowConfetti } from './fortune.js';
 
 // ランダム値生成をエクスポート
 export { generateRandomBase64 } from './random.js';

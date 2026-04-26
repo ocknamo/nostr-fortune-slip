@@ -4,10 +4,11 @@ import confetti from 'canvas-confetti';
 
 interface Props {
   text: string;
+  showConfetti?: boolean;
   onComplete?: () => void;
 }
 
-let { text, onComplete }: Props = $props();
+let { text, showConfetti = true, onComplete }: Props = $props();
 
 let phase: 'lightning' | 'reveal' | 'done' = $state('lightning');
 let canvasEl: HTMLCanvasElement | undefined = $state();
@@ -293,7 +294,7 @@ onMount(() => {
 
   setTimeout(() => {
     phase = 'reveal';
-    fireConfetti();
+    if (showConfetti) fireConfetti();
   }, totalMs);
 
   setTimeout(() => {

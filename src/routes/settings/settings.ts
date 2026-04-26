@@ -3,6 +3,8 @@ export { validateNpub } from '$lib/nostr/metadata.js';
 
 export const OPENSATS_ADDRESS = 'opensats@npub.cash';
 export const DEFAULT_FORTUNE_TEXTS = '大吉,中吉,小吉,吉,末吉,凶,大凶';
+export const DEFAULT_CONFETTI_TEXTS = '大吉,中吉,小吉,吉,末吉';
+export const DEFAULT_NO_CONFETTI_TEXTS = '凶,大凶';
 
 export interface SettingsFormState {
   lightningAddress: string;
