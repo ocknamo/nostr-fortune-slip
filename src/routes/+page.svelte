@@ -415,8 +415,8 @@ function startAutoReset() {
       {/if}
 
       <!-- Zap検知後のランダム数字表示 -->
-      {#if zapDetected && !isAnimationPlaying}
-      <div class="mb-6 bg-white pl-4 pr-4 w-50">
+      {#if zapDetected && !isAnimationPlaying && !isLightningPlaying}
+      <div class="mb-6 bg-white pl-4 pr-4 w-50 animate-fade-in">
         <div class="flex flex-col justify-center mb-4 border-b pb-4">
           {#if !hideOmikujiMessage}
           <div class="h-36 flex items-center justify-center">
@@ -447,3 +447,13 @@ function startAutoReset() {
     </div>
   </div>
 </div>
+
+<style>
+  @keyframes fade-in {
+    0%   { opacity: 0; transform: translateY(10px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade-in {
+    animation: fade-in 0.6s ease-out forwards;
+  }
+</style>

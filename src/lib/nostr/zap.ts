@@ -172,8 +172,8 @@ export function subscribeToZapReceipts(
 
   console.log(`[Zap Monitor] Filter:`, JSON.stringify(filter, null, 2));
 
-  // サブスクリプション開始 - 正しい型を使用
-  const subscription = pool.subscribeMany(RELAYS, [filter], {
+  // サブスクリプション開始
+  const subscription = pool.subscribeMany(RELAYS, filter, {
     onevent: async (event: Event) => {
       console.log(`[Zap Monitor] Received zap receipt:`, event);
 
