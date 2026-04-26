@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  OPENSATS_ADDRESS,
-  DEFAULT_FORTUNE_TEXTS,
-  validateForm,
-  applyDefaultFortuneTexts,
-  applyDonateToOpenSats,
-} from './settings.js';
+import { OPENSATS_ADDRESS, validateForm, applyDonateToOpenSats } from './settings.js';
 
 const validState = {
   lightningAddress: 'user@domain.com',
@@ -181,24 +175,6 @@ describe('validateForm', () => {
       const errors = validateForm({ ...validState, lightningAddress: '', nostrPrivateKey: '', pinCode: '' }, true);
       expect(errors.pinCode).toBe('PINは必須です');
     });
-  });
-});
-
-describe('applyDefaultFortuneTexts', () => {
-  it('有効化すると現在のテキストを保存してデフォルトに切り替わる', () => {
-    const result = applyDefaultFortuneTexts(true, 'カスタムテキスト', '');
-    expect(result.fortuneTexts).toBe(DEFAULT_FORTUNE_TEXTS);
-    expect(result.savedFortuneTexts).toBe('カスタムテキスト');
-  });
-
-  it('無効化すると保存済みテキストに戻る', () => {
-    const result = applyDefaultFortuneTexts(false, DEFAULT_FORTUNE_TEXTS, 'カスタムテキスト');
-    expect(result.fortuneTexts).toBe('カスタムテキスト');
-  });
-
-  it('有効化時に既存のsavedFortuneTextsは無視される', () => {
-    const result = applyDefaultFortuneTexts(true, '現在のテキスト', '古い保存テキスト');
-    expect(result.savedFortuneTexts).toBe('現在のテキスト');
   });
 });
 

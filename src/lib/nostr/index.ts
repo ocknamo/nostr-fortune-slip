@@ -29,7 +29,7 @@ export { generateLuckyNumber, getFortuneText, shouldShowConfetti } from './fortu
 // ランダム値生成をエクスポート
 export { generateRandomBase64 } from './random.js';
 
-export { RELAYS, DEFAULT_RELAYS, getRelays, parseRelays, serializeRelays, validateRelayText } from './relay.js';
+export { DEFAULT_RELAYS, getRelays, parseRelays, serializeRelays, validateRelayText } from './relay.js';
 
 // メタデータ取得関連をエクスポート
 export { decodeNpub, fetchMetadataFromRelays, validateNpub } from './metadata.js';

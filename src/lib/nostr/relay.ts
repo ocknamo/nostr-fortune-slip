@@ -45,6 +45,3 @@ export function getRelays(): string[] {
   }
   return parseRelays(stored);
 }
-
-// 後方互換: 既存コードが import { RELAYS } しているため
-export const RELAYS = DEFAULT_RELAYS;

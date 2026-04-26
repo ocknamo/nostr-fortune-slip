@@ -141,59 +141,35 @@ function stopZapMonitoring() {
   paymentId = null;
 }
 
-async function onZapDetected(zapReceipt: NostrEvent) {
-  if (zapDetected) {
-    return;
-  }
+// 支払い検知時の共通処理
+function handlePaymentDetected() {
+  if (zapDetected) return;
 
-  console.log('[Fortune Slip] Zap detected!', zapReceipt);
-
-  // coinosへのポーリングを停止
-  coinosPollingSubscription?.stop();
-
-  // QRコードを非表示
   qrCodeDataUrl = '';
-  // 番号生成（設定された範囲を使用）
   randomNumber = generateLuckyNumber(fortuneMin, fortuneMax);
-  // おみくじテキストを取得
   fortuneTextForNumber = getFortuneText(randomNumber, fortuneTexts);
   showConfettiForResult = shouldShowConfetti(fortuneTextForNumber, confettiTexts);
-  // アニメーション開始を先にセットしてからzapDetectedを立てる
-  // (zapDetected=trueかつisAnimationPlaying=falseだと結果画面が先に表示されてしまうため)
+  // isAnimationPlayingを先にセット（zapDetected=trueだけだと結果画面が先に表示されるため）
   isAnimationPlaying = true;
   zapDetected = true;
   stopZapMonitoring();
+}
+
+async function onZapDetected(zapReceipt: NostrEvent) {
+  console.log('[Fortune Slip] Zap detected!', zapReceipt);
+  handlePaymentDetected();
 }
 
 function onZapError(error: string) {
   console.error('[Fortune Slip] Zap verification error:', error);
-
-  // Zapエラーが発生した場合
   errorMessage = `Zap検証エラー: ${error}`;
-
-  // QRコードを非表示
   qrCodeDataUrl = '';
   stopZapMonitoring();
 }
 
-async function onCoinosPaymentDetected(payment: any) {
-  if (zapDetected) {
-    return;
-  }
-
+async function onCoinosPaymentDetected(payment: unknown) {
   console.log('[Fortune Slip] Coinos payment detected!', payment);
-
-  // QRコードを非表示
-  qrCodeDataUrl = '';
-  // 番号生成（設定された範囲を使用）
-  randomNumber = generateLuckyNumber(fortuneMin, fortuneMax);
-  // おみくじテキストを取得
-  fortuneTextForNumber = getFortuneText(randomNumber, fortuneTexts);
-  showConfettiForResult = shouldShowConfetti(fortuneTextForNumber, confettiTexts);
-  // アニメーション開始を先にセットしてからzapDetectedを立てる
-  isAnimationPlaying = true;
-  zapDetected = true;
-  stopZapMonitoring();
+  handlePaymentDetected();
 }
 
 function resetFortuneSlip() {

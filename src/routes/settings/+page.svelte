@@ -6,7 +6,6 @@ import { onMount } from 'svelte';
 import backgroundImage from '$lib/assets/background.jpg';
 import {
   OPENSATS_ADDRESS,
-  DEFAULT_FORTUNE_TEXTS,
   DEFAULT_CONFETTI_TEXTS,
   DEFAULT_NO_CONFETTI_TEXTS,
   DEFAULT_RELAYS,
@@ -14,10 +13,11 @@ import {
   validateRelayText,
   validateNpub,
   validateForm as _validateForm,
-  applyDefaultFortuneTexts,
   applyDonateToOpenSats,
 } from './settings.js';
 import { isNip07Available, nip07GetPublicKey, syncRelaysFromNip65 } from '$lib/nostr/nip07.js';
+import { fetchMetadataFromRelays } from '$lib/nostr/metadata.js';
+import type { MetadataContent } from '$lib/nostr';
 import { nip19 } from 'nostr-tools';
 
 // フォームデータ
@@ -73,6 +73,7 @@ let nip07LoginError = '';
 let syncRelaysWithNip65 = false; // kind:10002同期チェックボックス
 let syncRelaysLoading = false; // 同期中フラグ
 let syncRelaysError = ''; // 同期エラー
+let nip07Profile: MetadataContent | null = null; // ログインユーザーのkind:0プロフィール
 
 // UI状態
 let showSuccessMessage = false;
@@ -135,6 +136,10 @@ onMount(() => {
       nip07LoggedIn = true;
       nip07Pubkey = storedNip07Pubkey;
       nip07Npub = nip19.npubEncode(storedNip07Pubkey);
+      // kind:0からプロフィールを取得（非同期・バックグラウンド）
+      fetchMetadataFromRelays(storedNip07Pubkey).then((profile) => {
+        nip07Profile = profile;
+      });
     }
     syncRelaysWithNip65 = localStorage.getItem('syncRelaysWithNip65') === 'true';
 
@@ -146,7 +151,7 @@ onMount(() => {
       savedNoConfettiTexts = storedNoConfetti || '';
       confettiFortuneTexts = DEFAULT_CONFETTI_TEXTS;
       noConfettiFortuneTexts = DEFAULT_NO_CONFETTI_TEXTS;
-      fortuneTexts = DEFAULT_FORTUNE_TEXTS;
+      fortuneTexts = [DEFAULT_CONFETTI_TEXTS, DEFAULT_NO_CONFETTI_TEXTS].join(',');
     } else {
       confettiFortuneTexts = storedConfetti ?? DEFAULT_CONFETTI_TEXTS;
       noConfettiFortuneTexts = storedNoConfetti ?? DEFAULT_NO_CONFETTI_TEXTS;
@@ -164,6 +169,8 @@ async function handleNip07Login() {
     nip07Npub = nip19.npubEncode(pubkey);
     nip07LoggedIn = true;
     localStorage.setItem('nip07Pubkey', pubkey);
+    // kind:0からプロフィールを取得
+    nip07Profile = await fetchMetadataFromRelays(pubkey);
   } catch (error) {
     nip07LoginError = error instanceof Error ? error.message : 'NIP-07ログインに失敗しました';
   }
@@ -175,6 +182,7 @@ function handleNip07Logout() {
   nip07Pubkey = '';
   nip07Npub = '';
   nip07LoginError = '';
+  nip07Profile = null;
   syncRelaysWithNip65 = false;
   syncRelaysError = '';
   localStorage.removeItem('nip07Pubkey');
@@ -427,10 +435,21 @@ function handleClearData() {
           <h2 class="text-lg font-semibold text-gray-900 mb-4">Nostr署名</h2>
           {#if nip07LoggedIn}
             <div class="p-3 bg-green-50 border border-green-200 rounded-md">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-sm font-medium text-green-800">NIP-07ログイン中</p>
-                  <p class="text-xs text-green-600 font-mono mt-1 break-all">{nip07Npub}</p>
+              <div class="flex items-start justify-between">
+                <div class="flex items-start gap-3">
+                  {#if nip07Profile?.picture}
+                    <img src={nip07Profile.picture} alt="avatar" class="w-10 h-10 rounded-full flex-shrink-0" />
+                  {/if}
+                  <div>
+                    <p class="text-sm font-medium text-green-800">NIP-07ログイン中</p>
+                    {#if nip07Profile?.display_name || nip07Profile?.name}
+                      <p class="text-sm text-green-700 font-semibold">{nip07Profile.display_name || nip07Profile.name}</p>
+                    {/if}
+                    {#if nip07Profile?.lud16}
+                      <p class="text-xs text-green-600 mt-0.5">{nip07Profile.lud16}</p>
+                    {/if}
+                    <p class="text-xs text-green-600 font-mono mt-1 break-all">{nip07Npub}</p>
+                  </div>
                 </div>
                 <button
                   type="button"

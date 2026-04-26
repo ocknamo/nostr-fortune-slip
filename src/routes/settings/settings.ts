@@ -2,7 +2,6 @@ export { DEFAULT_RELAYS, serializeRelays, validateRelayText } from '$lib/nostr/r
 export { validateNpub } from '$lib/nostr/metadata.js';
 
 export const OPENSATS_ADDRESS = 'opensats@npub.cash';
-export const DEFAULT_FORTUNE_TEXTS = '大吉,中吉,小吉,吉,末吉,凶,大凶';
 export const DEFAULT_CONFETTI_TEXTS = '大吉,中吉,小吉,吉,末吉';
 export const DEFAULT_NO_CONFETTI_TEXTS = '凶,大凶';
 
@@ -75,17 +74,6 @@ export function validateForm(state: SettingsFormState, options: boolean | Valida
   }
 
   return errors;
-}
-
-export function applyDefaultFortuneTexts(
-  enabled: boolean,
-  currentTexts: string,
-  savedTexts: string,
-): { fortuneTexts: string; savedFortuneTexts: string } {
-  if (enabled) {
-    return { fortuneTexts: DEFAULT_FORTUNE_TEXTS, savedFortuneTexts: currentTexts };
-  }
-  return { fortuneTexts: savedTexts, savedFortuneTexts: savedTexts };
 }
 
 export function applyDonateToOpenSats(

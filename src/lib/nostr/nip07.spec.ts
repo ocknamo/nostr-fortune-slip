@@ -20,7 +20,6 @@ vi.mock('nostr-tools', async () => {
 vi.mock('./relay.js', () => ({
   getRelays: () => ['wss://relay1.test/'],
   DEFAULT_RELAYS: ['wss://relay1.test/'],
-  RELAYS: ['wss://relay1.test/'],
   parseRelays: (t: string) => t.split('\n').filter(Boolean),
   serializeRelays: (r: string[]) => r.join('\n'),
   validateRelayText: () => null,
