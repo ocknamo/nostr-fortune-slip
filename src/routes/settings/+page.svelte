@@ -685,49 +685,72 @@ function handleClearData() {
         <!-- くじの範囲設定 -->
         <div class="border-t pt-6">
           <h2 class="text-lg font-semibold text-gray-900 mb-4">おみくじ設定</h2>
-          
-          <div class="grid grid-cols-2 gap-4 mb-4">
-            <!-- 最小値 -->
-            <div>
-              <label for="fortune-min" class="block text-sm font-medium text-gray-700 mb-2">
-                最小値
-              </label>
-              <input
-                id="fortune-min"
-                type="number"
-                min="1"
-                step="1"
-                bind:value={fortuneMin}
-                placeholder="1"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                class:border-red-500={errors.fortuneMin}
-              />
-              {#if errors.fortuneMin}
-                <p class="mt-1 text-sm text-red-600">{errors.fortuneMin}</p>
-              {/if}
-            </div>
 
-            <!-- 最大値 -->
-            <div>
-              <label for="fortune-max" class="block text-sm font-medium text-gray-700 mb-2">
-                最大値
-              </label>
-              <input
-                id="fortune-max"
-                type="number"
-                min="1"
-                step="1"
-                bind:value={fortuneMax}
-                placeholder="20"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                class:border-red-500={errors.fortuneMax}
-              />
-              {#if errors.fortuneMax}
-                <p class="mt-1 text-sm text-red-600">{errors.fortuneMax}</p>
-              {/if}
-            </div>
+          <!-- 紙のおみくじを促すメッセージ非表示設定 -->
+          <div class="flex items-center mb-4">
+            <input
+              id="hide-omikuji-message"
+              type="checkbox"
+              bind:checked={hideOmikujiMessage}
+              class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label for="hide-omikuji-message" class="ml-2 text-sm text-gray-700">
+              紙のおみくじを促すメッセージを表示しない
+            </label>
           </div>
-          <p class="text-sm text-gray-500 mb-4">くじの数字の範囲を設定します（例：1〜20）</p>
+
+          <!-- 紙おみくじ番号設定（hideOmikujiMessage=false の時のみ有効） -->
+          <div class="mb-4 p-3 border border-gray-200 rounded-md" class:opacity-40={hideOmikujiMessage}>
+            <p class="text-sm font-medium text-gray-700 mb-3">紙おみくじの番号設定</p>
+            <div class="grid grid-cols-2 gap-4">
+              <!-- 最小値 -->
+              <div>
+                <label for="fortune-min" class="block text-xs font-medium text-gray-600 mb-1">
+                  最小値
+                </label>
+                <input
+                  id="fortune-min"
+                  type="number"
+                  min="1"
+                  step="1"
+                  bind:value={fortuneMin}
+                  placeholder="1"
+                  disabled={hideOmikujiMessage}
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  class:border-red-500={errors.fortuneMin}
+                  class:bg-gray-100={hideOmikujiMessage}
+                  class:cursor-not-allowed={hideOmikujiMessage}
+                />
+                {#if errors.fortuneMin}
+                  <p class="mt-1 text-sm text-red-600">{errors.fortuneMin}</p>
+                {/if}
+              </div>
+
+              <!-- 最大値 -->
+              <div>
+                <label for="fortune-max" class="block text-xs font-medium text-gray-600 mb-1">
+                  最大値
+                </label>
+                <input
+                  id="fortune-max"
+                  type="number"
+                  min="1"
+                  step="1"
+                  bind:value={fortuneMax}
+                  placeholder="20"
+                  disabled={hideOmikujiMessage}
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  class:border-red-500={errors.fortuneMax}
+                  class:bg-gray-100={hideOmikujiMessage}
+                  class:cursor-not-allowed={hideOmikujiMessage}
+                />
+                {#if errors.fortuneMax}
+                  <p class="mt-1 text-sm text-red-600">{errors.fortuneMax}</p>
+                {/if}
+              </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">紙おみくじの番号範囲を設定します（例：1〜20）</p>
+          </div>
 
           <!-- おみくじ内容 -->
           <div>
@@ -786,19 +809,6 @@ function handleClearData() {
             <p class="mt-1 text-sm text-gray-500">
               両方を合わせた配列がおみくじ結果になります。数字が配列の長さを超える場合は循環します。
             </p>
-          </div>
-
-          <!-- おみくじメッセージ非表示設定 -->
-          <div class="flex items-center mt-4">
-            <input
-              id="hide-omikuji-message"
-              type="checkbox"
-              bind:checked={hideOmikujiMessage}
-              class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <label for="hide-omikuji-message" class="ml-2 text-sm text-gray-700">
-              紙のおみくじを促すメッセージを表示しない
-            </label>
           </div>
 
           <!-- テストモード -->
