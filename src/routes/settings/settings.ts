@@ -12,18 +12,24 @@ export interface SettingsFormState {
 
 export type SettingsErrors = Record<string, string>;
 
-export function validateForm(state: SettingsFormState): SettingsErrors {
+export function validateForm(state: SettingsFormState, testMode = false): SettingsErrors {
   const errors: SettingsErrors = {};
 
-  if (!state.lightningAddress.trim()) {
-    errors.lightningAddress = 'ライトニングアドレスは必須です';
-  } else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(state.lightningAddress)) {
-    errors.lightningAddress = '正しいメールアドレス形式で入力してください（例：user@domain.com）';
-  }
+  if (!testMode) {
+    if (!state.lightningAddress.trim()) {
+      errors.lightningAddress = 'ライトニングアドレスは必須です';
+    } else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(state.lightningAddress)) {
+      errors.lightningAddress = '正しいメールアドレス形式で入力してください（例：user@domain.com）';
+    }
 
-  if (!state.nostrPrivateKey.trim()) {
-    errors.nostrPrivateKey = 'Nostr秘密鍵は必須です';
-  } else if (!state.nostrPrivateKey.startsWith('nsec1')) {
+    if (!state.nostrPrivateKey.trim()) {
+      errors.nostrPrivateKey = 'Nostr秘密鍵は必須です';
+    } else if (!state.nostrPrivateKey.startsWith('nsec1')) {
+      errors.nostrPrivateKey = 'nsec1で始まる有効な秘密鍵を入力してください';
+    }
+  } else if (state.lightningAddress.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(state.lightningAddress)) {
+    errors.lightningAddress = '正しいメールアドレス形式で入力してください（例：user@domain.com）';
+  } else if (state.nostrPrivateKey.trim() && !state.nostrPrivateKey.startsWith('nsec1')) {
     errors.nostrPrivateKey = 'nsec1で始まる有効な秘密鍵を入力してください';
   }
 

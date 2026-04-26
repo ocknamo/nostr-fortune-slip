@@ -103,7 +103,7 @@ onMount(() => {
 
 // バリデーション関数
 function validateForm(): boolean {
-  errors = _validateForm({ lightningAddress, nostrPrivateKey, pinCode, zapAmount, fortuneMin, fortuneMax });
+  errors = _validateForm({ lightningAddress, nostrPrivateKey, pinCode, zapAmount, fortuneMin, fortuneMax }, testMode);
   return Object.keys(errors).length === 0;
 }
 
@@ -295,6 +295,7 @@ function handleClearData() {
         <div>
           <label for="lightning-address" class="block text-sm font-medium text-gray-700 mb-2">
             ライトニングアドレス
+            {#if testMode}<span class="ml-1 text-xs font-normal text-gray-400">（テストモード時は任意）</span>{/if}
           </label>
           <input
             id="lightning-address"
@@ -316,6 +317,7 @@ function handleClearData() {
         <div>
           <label for="nostr-private-key" class="block text-sm font-medium text-gray-700 mb-2">
             Nostr秘密鍵 (nsec形式)
+            {#if testMode}<span class="ml-1 text-xs font-normal text-gray-400">（テストモード時は任意）</span>{/if}
           </label>
           <input
             id="nostr-private-key"
@@ -505,16 +507,23 @@ function handleClearData() {
           </div>
 
           <!-- テストモード -->
-          <div class="flex items-center mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-            <input
-              id="test-mode"
-              type="checkbox"
-              bind:checked={testMode}
-              class="h-4 w-4 text-yellow-600 border-gray-300 rounded focus:ring-yellow-500"
-            />
-            <label for="test-mode" class="ml-2 text-sm text-yellow-800">
-              テストモード（zapなしでくじを引ける）
-            </label>
+          <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+            <div class="flex items-center">
+              <input
+                id="test-mode"
+                type="checkbox"
+                bind:checked={testMode}
+                class="h-4 w-4 text-yellow-600 border-gray-300 rounded focus:ring-yellow-500"
+              />
+              <label for="test-mode" class="ml-2 text-sm font-medium text-yellow-800">
+                テストモード（外部通信なしでくじを引ける）
+              </label>
+            </div>
+            {#if testMode}
+              <p class="mt-2 text-xs text-yellow-700">
+                ライトニングアドレス・Nostr秘密鍵の設定なしで動作します。Zapや外部APIへの通信は行いません。
+              </p>
+            {/if}
           </div>
         </div>
 

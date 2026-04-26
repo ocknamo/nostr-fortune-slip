@@ -173,58 +173,54 @@ export function subscribeToZapReceipts(
   console.log(`[Zap Monitor] Filter:`, JSON.stringify(filter, null, 2));
 
   // サブスクリプション開始 - 正しい型を使用
-  const subscription = pool.subscribeMany(
-    RELAYS,
-    [filter],
-    {
-      onevent: async (event: Event) => {
-        console.log(`[Zap Monitor] Received zap receipt:`, event);
+  const subscription = pool.subscribeMany(RELAYS, [filter], {
+    onevent: async (event: Event) => {
+      console.log(`[Zap Monitor] Received zap receipt:`, event);
 
-        const zapReceipt = event as NostrEvent;
+      const zapReceipt = event as NostrEvent;
 
-        try {
-          // Coinos API検証を含む総合的な検証を実行
-          const verificationResult = await validateZapReceiptWithCoinos(
-            zapReceipt,
-            targetEventId,
-            zapRequest,
-            coinosApiToken,
-          );
+      try {
+        // Coinos API検証を含む総合的な検証を実行
+        const verificationResult = await validateZapReceiptWithCoinos(
+          zapReceipt,
+          targetEventId,
+          zapRequest,
+          coinosApiToken,
+        );
 
-          if (verificationResult.valid) {
-            console.log(`[Zap Monitor] Valid zap receipt detected for event: ${targetEventId}`);
-            if (verificationResult.coinosVerified) {
-              console.log(`[Zap Monitor] Coinos verification also passed`);
-            }
-            onZapReceived(zapReceipt);
-          } else {
-            console.warn(`[Zap Monitor] Invalid zap receipt for event: ${targetEventId}`, verificationResult.error);
-            // Coinos検証失敗の場合、エラーコールバックを呼び出す
-            if (
-              verificationResult.error &&
-              verificationResult.error.includes('Coinos verification failed') &&
-              onZapError
-            ) {
-              onZapError(verificationResult.error);
-            }
+        if (verificationResult.valid) {
+          console.log(`[Zap Monitor] Valid zap receipt detected for event: ${targetEventId}`);
+          if (verificationResult.coinosVerified) {
+            console.log(`[Zap Monitor] Coinos verification also passed`);
           }
-        } catch (error) {
-          console.error(`[Zap Monitor] Error during zap receipt verification:`, error);
-          // 検証エラーの場合もエラーコールバックを呼び出す
-          if (onZapError) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            onZapError(`Zap verification error: ${errorMessage}`);
+          onZapReceived(zapReceipt);
+        } else {
+          console.warn(`[Zap Monitor] Invalid zap receipt for event: ${targetEventId}`, verificationResult.error);
+          // Coinos検証失敗の場合、エラーコールバックを呼び出す
+          if (
+            verificationResult.error &&
+            verificationResult.error.includes('Coinos verification failed') &&
+            onZapError
+          ) {
+            onZapError(verificationResult.error);
           }
         }
-      },
-      oneose: () => {
-        console.log(`[Zap Monitor] End of stored events for subscription: ${subscriptionId}`);
-      },
-      onclose: (reasons: string[]) => {
-        console.log(`[Zap Monitor] Subscription closed:`, reasons);
-      },
+      } catch (error) {
+        console.error(`[Zap Monitor] Error during zap receipt verification:`, error);
+        // 検証エラーの場合もエラーコールバックを呼び出す
+        if (onZapError) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          onZapError(`Zap verification error: ${errorMessage}`);
+        }
+      }
     },
-  );
+    oneose: () => {
+      console.log(`[Zap Monitor] End of stored events for subscription: ${subscriptionId}`);
+    },
+    onclose: (reasons: string[]) => {
+      console.log(`[Zap Monitor] Subscription closed:`, reasons);
+    },
+  });
 
   // タイムアウト設定
   const timeoutId = setTimeout(() => {

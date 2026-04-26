@@ -296,16 +296,9 @@ function showSubmit() {
 }
 
 function handleAnimationComplete() {
-  // アニメーション完了後
+  // アニメーション完了後、常に稲妻演出を開始
   isAnimationPlaying = false;
-
-  if (hideOmikujiMessage && fortuneTextForNumber) {
-    // 稲妻演出を開始
-    isLightningPlaying = true;
-  } else {
-    zapDetected = true;
-    startAutoReset();
-  }
+  isLightningPlaying = true;
 }
 
 function handleLightningComplete() {
@@ -420,8 +413,8 @@ function startAutoReset() {
       {/if}
 
       <!-- 稲妻演出 -->
-      {#if isLightningPlaying && fortuneTextForNumber}
-        <LightningReveal text={fortuneTextForNumber} onComplete={handleLightningComplete} />
+      {#if isLightningPlaying}
+        <LightningReveal text={fortuneTextForNumber ?? ''} onComplete={handleLightningComplete} />
       {/if}
 
       <!-- Zap検知後のランダム数字表示 -->
