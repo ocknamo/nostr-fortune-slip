@@ -15,6 +15,8 @@ import {
   applyDefaultFortuneTexts,
   applyDonateToOpenSats,
 } from './settings.js';
+import { isNip07Available, nip07GetPublicKey, syncRelaysFromNip65 } from '$lib/nostr/nip07.js';
+import { nip19 } from 'nostr-tools';
 
 // フォームデータ
 let lightningAddress = '';
@@ -47,6 +49,16 @@ function handleDonateToOpenSatsChange() {
   lightningAddress = result.lightningAddress;
   savedLightningAddress = result.savedLightningAddress;
 }
+
+// NIP-07状態
+let nip07Available = false;
+let nip07LoggedIn = false;
+let nip07Pubkey = ''; // hex公開鍵
+let nip07Npub = ''; // npub表示用
+let nip07LoginError = '';
+let syncRelaysWithNip65 = false; // kind:10002同期チェックボックス
+let syncRelaysLoading = false; // 同期中フラグ
+let syncRelaysError = ''; // 同期エラー
 
 // UI状態
 let showSuccessMessage = false;
@@ -101,6 +113,17 @@ onMount(() => {
     const storedRelays = localStorage.getItem('relays');
     relaysText = storedRelays || serializeRelays(DEFAULT_RELAYS);
     zapRecipientNpub = localStorage.getItem('zapRecipientNpub') || '';
+
+    // NIP-07状態を復元
+    nip07Available = isNip07Available();
+    const storedNip07Pubkey = localStorage.getItem('nip07Pubkey');
+    if (storedNip07Pubkey) {
+      nip07LoggedIn = true;
+      nip07Pubkey = storedNip07Pubkey;
+      nip07Npub = nip19.npubEncode(storedNip07Pubkey);
+    }
+    syncRelaysWithNip65 = localStorage.getItem('syncRelaysWithNip65') === 'true';
+
     if (useDefaultFortuneTexts) {
       savedFortuneTexts = storedFortuneTexts;
       fortuneTexts = DEFAULT_FORTUNE_TEXTS;
@@ -110,12 +133,66 @@ onMount(() => {
   }
 });
 
+// NIP-07ログイン
+async function handleNip07Login() {
+  nip07LoginError = '';
+  try {
+    const pubkey = await nip07GetPublicKey();
+    nip07Pubkey = pubkey;
+    nip07Npub = nip19.npubEncode(pubkey);
+    nip07LoggedIn = true;
+    localStorage.setItem('nip07Pubkey', pubkey);
+  } catch (error) {
+    nip07LoginError = error instanceof Error ? error.message : 'NIP-07ログインに失敗しました';
+  }
+}
+
+// NIP-07ログアウト
+function handleNip07Logout() {
+  nip07LoggedIn = false;
+  nip07Pubkey = '';
+  nip07Npub = '';
+  nip07LoginError = '';
+  syncRelaysWithNip65 = false;
+  syncRelaysError = '';
+  localStorage.removeItem('nip07Pubkey');
+  localStorage.removeItem('syncRelaysWithNip65');
+}
+
+// kind:10002同期チェックボックス切り替え
+async function handleSyncRelaysChange() {
+  if (syncRelaysWithNip65) {
+    // チェックON: kind:10002からリレーを取得
+    syncRelaysLoading = true;
+    syncRelaysError = '';
+    try {
+      const result = await syncRelaysFromNip65(nip07Pubkey);
+      if (result) {
+        relaysText = result;
+        localStorage.setItem('relays', result);
+      } else {
+        syncRelaysError = 'kind:10002のリレーリストが見つかりませんでした';
+        syncRelaysWithNip65 = false;
+      }
+    } catch (error) {
+      syncRelaysError = 'リレーリストの取得に失敗しました';
+      syncRelaysWithNip65 = false;
+    } finally {
+      syncRelaysLoading = false;
+    }
+    localStorage.setItem('syncRelaysWithNip65', syncRelaysWithNip65.toString());
+  } else {
+    // チェックOFF
+    localStorage.setItem('syncRelaysWithNip65', 'false');
+  }
+}
+
 // バリデーション関数
 function validateForm(): boolean {
   const hasNpub = !!zapRecipientNpub.trim();
   errors = _validateForm(
     { lightningAddress, nostrPrivateKey, pinCode, zapAmount, fortuneMin, fortuneMax },
-    { skipLightningAddress: testMode || hasNpub, skipNostrKey: testMode },
+    { skipLightningAddress: testMode || hasNpub, skipNostrKey: testMode || nip07LoggedIn },
   );
   const relayError = validateRelayText(relaysText);
   if (relayError) {
@@ -142,7 +219,11 @@ function handleSave() {
     localStorage.setItem('useDefaultFortuneTexts', useDefaultFortuneTexts.toString());
     localStorage.setItem('fortuneTexts', useDefaultFortuneTexts ? savedFortuneTexts : fortuneTexts);
     localStorage.setItem('relays', relaysText);
+    localStorage.setItem('syncRelaysWithNip65', syncRelaysWithNip65.toString());
     localStorage.setItem('zapRecipientNpub', zapRecipientNpub.trim());
+    if (nip07LoggedIn) {
+      localStorage.setItem('nip07Pubkey', nip07Pubkey);
+    }
     localStorage.setItem('hideOmikujiMessage', hideOmikujiMessage.toString());
     localStorage.setItem('testMode', testMode.toString());
 
@@ -185,6 +266,8 @@ function handleClearData() {
     localStorage.removeItem('donateToOpenSats');
     localStorage.removeItem('relays');
     localStorage.removeItem('zapRecipientNpub');
+    localStorage.removeItem('nip07Pubkey');
+    localStorage.removeItem('syncRelaysWithNip65');
     // 旧データも削除（後方互換性のため）
     localStorage.removeItem('coinosId');
     localStorage.removeItem('coinosPassword');
@@ -204,6 +287,10 @@ function handleClearData() {
     donateToOpenSats = false;
     relaysText = serializeRelays(DEFAULT_RELAYS);
     zapRecipientNpub = '';
+    nip07LoggedIn = false;
+    nip07Pubkey = '';
+    nip07Npub = '';
+    syncRelaysWithNip65 = false;
 
     showDeleteMessage = true;
     setTimeout(() => {
@@ -304,6 +391,48 @@ function handleClearData() {
           {/if}
         </div>
 
+        <!-- NIP-07ログイン -->
+        <div class="border-t pt-6">
+          <h2 class="text-lg font-semibold text-gray-900 mb-4">Nostr署名</h2>
+          {#if nip07LoggedIn}
+            <div class="p-3 bg-green-50 border border-green-200 rounded-md">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-medium text-green-800">NIP-07ログイン中</p>
+                  <p class="text-xs text-green-600 font-mono mt-1 break-all">{nip07Npub}</p>
+                </div>
+                <button
+                  type="button"
+                  on:click={handleNip07Logout}
+                  class="ml-3 text-sm text-red-600 hover:text-red-800 underline flex-shrink-0"
+                >
+                  ログアウト
+                </button>
+              </div>
+            </div>
+          {:else}
+            <div class="p-3 bg-gray-50 border border-gray-200 rounded-md">
+              <p class="text-sm text-gray-600 mb-3">
+                NIP-07ブラウザ拡張（nos2x, Albyなど）でログインすると、秘密鍵を入力せずにZapリクエストに署名できます。
+              </p>
+              {#if nip07Available}
+                <button
+                  type="button"
+                  on:click={handleNip07Login}
+                  class="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+                >
+                  NIP-07でログイン
+                </button>
+              {:else}
+                <p class="text-sm text-gray-400">NIP-07拡張が検出されませんでした</p>
+              {/if}
+              {#if nip07LoginError}
+                <p class="mt-2 text-sm text-red-600">{nip07LoginError}</p>
+              {/if}
+            </div>
+          {/if}
+        </div>
+
         <!-- Zap先の公開鍵 -->
         <div>
           <label for="zap-recipient-npub" class="block text-sm font-medium text-gray-700 mb-2">
@@ -365,18 +494,22 @@ function handleClearData() {
         </div>
 
         <!-- Nostr秘密鍵 -->
-        <div>
+        <div class:opacity-40={nip07LoggedIn}>
           <label for="nostr-private-key" class="block text-sm font-medium text-gray-700 mb-2">
             Nostr秘密鍵 (nsec形式)
-            {#if testMode}<span class="ml-1 text-xs font-normal text-gray-400">（テストモード時は任意）</span>{/if}
+            {#if nip07LoggedIn}<span class="ml-1 text-xs font-normal text-gray-400">（NIP-07ログイン中は不要）</span>
+            {:else if testMode}<span class="ml-1 text-xs font-normal text-gray-400">（テストモード時は任意）</span>{/if}
           </label>
           <input
             id="nostr-private-key"
             type="password"
             bind:value={nostrPrivateKey}
             placeholder="nsec1..."
+            disabled={nip07LoggedIn}
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             class:border-red-500={errors.nostrPrivateKey}
+            class:bg-gray-100={nip07LoggedIn}
+            class:cursor-not-allowed={nip07LoggedIn}
           />
           {#if errors.nostrPrivateKey}
             <p class="mt-1 text-sm text-red-600">{errors.nostrPrivateKey}</p>
@@ -465,6 +598,27 @@ function handleClearData() {
         <!-- リレー設定 -->
         <div class="border-t pt-6">
           <h2 class="text-lg font-semibold text-gray-900 mb-4">リレー設定</h2>
+
+          {#if nip07LoggedIn}
+            <div class="flex items-center mb-3">
+              <input
+                id="sync-relays-nip65"
+                type="checkbox"
+                bind:checked={syncRelaysWithNip65}
+                on:change={handleSyncRelaysChange}
+                disabled={syncRelaysLoading}
+                class="h-4 w-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+              />
+              <label for="sync-relays-nip65" class="ml-2 text-sm text-gray-700">
+                kind:10002（NIP-65）からリレーを同期する
+                {#if syncRelaysLoading}<span class="ml-1 text-xs text-gray-400">取得中...</span>{/if}
+              </label>
+            </div>
+            {#if syncRelaysError}
+              <p class="mb-2 text-sm text-red-600">{syncRelaysError}</p>
+            {/if}
+          {/if}
+
           <div>
             <label for="relays-text" class="block text-sm font-medium text-gray-700 mb-2">
               Nostrリレー（1行に1つ）
@@ -474,21 +628,26 @@ function handleClearData() {
               bind:value={relaysText}
               rows="5"
               placeholder="wss://relay.damus.io/"
+              disabled={syncRelaysWithNip65}
               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
               class:border-red-500={errors.relays}
+              class:bg-gray-100={syncRelaysWithNip65}
+              class:cursor-not-allowed={syncRelaysWithNip65}
             ></textarea>
             {#if errors.relays}
               <p class="mt-1 text-sm text-red-600">{errors.relays}</p>
             {:else}
               <p class="mt-1 text-sm text-gray-500">Zap Receipt の監視に使用するリレーを設定します</p>
             {/if}
-            <button
-              type="button"
-              on:click={() => { relaysText = serializeRelays(DEFAULT_RELAYS); }}
-              class="mt-2 text-sm text-blue-600 hover:text-blue-800 underline"
-            >
-              デフォルトに戻す
-            </button>
+            {#if !syncRelaysWithNip65}
+              <button
+                type="button"
+                on:click={() => { relaysText = serializeRelays(DEFAULT_RELAYS); }}
+                class="mt-2 text-sm text-blue-600 hover:text-blue-800 underline"
+              >
+                デフォルトに戻す
+              </button>
+            {/if}
           </div>
         </div>
 

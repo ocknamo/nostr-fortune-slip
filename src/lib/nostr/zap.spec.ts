@@ -518,4 +518,51 @@ describe('subscribeToZapReceipts', () => {
 
     consoleSpy.mockRestore();
   });
+
+  it('recipientPubkey指定時は#pフィルターを使う（#eではなく）', () => {
+    const targetEventId = 'target-event-id';
+    const zapRequest: NostrEvent = {
+      id: 'zap-request-id',
+      pubkey: 'zap-pubkey',
+      created_at: Math.floor(Date.now() / 1000),
+      kind: 9734,
+      tags: [],
+      content: '',
+      sig: 'zap-sig',
+    };
+    const onZapReceived = vi.fn();
+    const recipientPubkey = 'recipient-pubkey-hex';
+
+    const mockSubscription = { close: vi.fn() };
+    mockPoolInstance.subscribeMany.mockReturnValue(mockSubscription);
+
+    subscribeToZapReceipts(targetEventId, zapRequest, onZapReceived, 300000, undefined, undefined, recipientPubkey);
+
+    const filterArg = mockPoolInstance.subscribeMany.mock.calls[0][1];
+    expect(filterArg).toHaveProperty('#p', [recipientPubkey]);
+    expect(filterArg).not.toHaveProperty('#e');
+  });
+
+  it('recipientPubkey未指定時は従来の#eフィルターを使う', () => {
+    const targetEventId = 'target-event-id';
+    const zapRequest: NostrEvent = {
+      id: 'zap-request-id',
+      pubkey: 'zap-pubkey',
+      created_at: Math.floor(Date.now() / 1000),
+      kind: 9734,
+      tags: [],
+      content: '',
+      sig: 'zap-sig',
+    };
+    const onZapReceived = vi.fn();
+
+    const mockSubscription = { close: vi.fn() };
+    mockPoolInstance.subscribeMany.mockReturnValue(mockSubscription);
+
+    subscribeToZapReceipts(targetEventId, zapRequest, onZapReceived);
+
+    const filterArg = mockPoolInstance.subscribeMany.mock.calls[0][1];
+    expect(filterArg).toHaveProperty('#e', [targetEventId]);
+    expect(filterArg).not.toHaveProperty('#p');
+  });
 });

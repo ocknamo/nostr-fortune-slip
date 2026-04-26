@@ -1,6 +1,7 @@
 import { nip19, nip57, finalizeEvent, type EventTemplate } from 'nostr-tools';
 import type { NostrEvent, MetadataContent } from './types.js';
 import { getRelays } from './relay.js';
+import { nip07SignEvent } from './nip07.js';
 
 /**
  * nsec形式の秘密鍵をhex形式に変換
@@ -36,23 +37,57 @@ export function createTextEvent(privateKeyHex: Uint8Array, content: string, tags
 
 /**
  * Zap Request イベント（kind 9734）を作成 (nostr-toolsのnip57.makeZapRequestを使用)
+ * recipientPubkey を指定するとProfileZapモード（特定pubkey宛）になる
  */
 export function createZapRequest(
   privateKeyHex: Uint8Array,
   targetEvent: NostrEvent,
   amount?: number,
   comment?: string,
+  recipientPubkey?: string,
 ): NostrEvent {
-  const zapRequestTemplate = nip57.makeZapRequest({
-    event: targetEvent,
-    amount: amount || 1000,
-    comment: comment || '',
-    relays: getRelays(),
-  });
+  const zapParams = recipientPubkey
+    ? { pubkey: recipientPubkey, amount: amount || 1000, comment: comment || '', relays: getRelays() }
+    : { event: targetEvent, amount: amount || 1000, comment: comment || '', relays: getRelays() };
+
+  const zapRequestTemplate = nip57.makeZapRequest(zapParams);
 
   // テンプレートに署名してEventに変換
   const signedEvent = finalizeEvent(zapRequestTemplate, privateKeyHex);
   return signedEvent as NostrEvent;
+}
+
+/**
+ * NIP-07でNostr kind 1イベントを作成・署名
+ */
+export async function createTextEventNip07(content: string, tags: string[][] = []): Promise<NostrEvent> {
+  const event: EventTemplate = {
+    kind: 1,
+    created_at: Math.floor(Date.now() / 1000),
+    tags,
+    content,
+  };
+
+  return nip07SignEvent(event);
+}
+
+/**
+ * NIP-07でZap Requestイベント（kind 9734）を作成・署名
+ * recipientPubkey を指定するとProfileZapモード（特定pubkey宛）になる
+ */
+export async function createZapRequestNip07(
+  targetEvent: NostrEvent,
+  amount?: number,
+  comment?: string,
+  recipientPubkey?: string,
+): Promise<NostrEvent> {
+  const zapParams = recipientPubkey
+    ? { pubkey: recipientPubkey, amount: amount || 1000, comment: comment || '', relays: getRelays() }
+    : { event: targetEvent, amount: amount || 1000, comment: comment || '', relays: getRelays() };
+
+  const zapRequestTemplate = nip57.makeZapRequest(zapParams);
+
+  return nip07SignEvent(zapRequestTemplate);
 }
 
 /**

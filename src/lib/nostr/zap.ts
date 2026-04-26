@@ -156,6 +156,7 @@ export function subscribeToZapReceipts(
   timeoutMs: number = 300000, // 5分のタイムアウト
   coinosApiToken?: string, // Coinos API Token（オプション）
   onZapError?: (error: string) => void, // エラーコールバック（オプション）
+  recipientPubkey?: string, // ProfileZap時のrecipient公開鍵
 ): ZapReceiptSubscription {
   const pool = new SimplePool();
   const relays = getRelays();
@@ -165,11 +166,11 @@ export function subscribeToZapReceipts(
   console.log(`[Zap Monitor] Coinos verification enabled:`, !!coinosApiToken);
   console.log(`[Zap Monitor] Relays:`, relays);
 
-  // フィルターを正しいFilter型で作成
+  // フィルターを作成: ProfileZap時は#p、EventZap時は#e
   const filter: Filter = {
     kinds: [9735],
     since: Math.floor(Date.now() / 1000) - 300,
-    '#e': [targetEventId], // Filter型のindex signatureを使用
+    ...(recipientPubkey ? { '#p': [recipientPubkey] } : { '#e': [targetEventId] }),
   };
 
   console.log(`[Zap Monitor] Filter:`, JSON.stringify(filter, null, 2));
