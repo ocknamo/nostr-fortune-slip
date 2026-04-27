@@ -126,17 +126,25 @@ function drawBolts(ctx: CanvasRenderingContext2D, bolts: BoltData[], alpha: numb
     ctx.stroke();
   }
 
-  // パス2: コア
+  // パス2: コア（lineWidthが異なるsegをグループ化して描画）
   ctx.globalAlpha = Math.min(alpha, 1);
   for (const bolt of bolts) {
-    ctx.beginPath();
     ctx.strokeStyle = bolt.color;
+    const byWidth = new Map<number, Seg[]>();
     for (const s of bolt.segs) {
-      ctx.lineWidth = s.w;
-      ctx.moveTo(s.x1, s.y1);
-      ctx.lineTo(s.x2, s.y2);
+      const group = byWidth.get(s.w);
+      if (group) group.push(s);
+      else byWidth.set(s.w, [s]);
     }
-    ctx.stroke();
+    for (const [w, segs] of byWidth) {
+      ctx.beginPath();
+      ctx.lineWidth = w;
+      for (const s of segs) {
+        ctx.moveTo(s.x1, s.y1);
+        ctx.lineTo(s.x2, s.y2);
+      }
+      ctx.stroke();
+    }
   }
 
   ctx.restore();
@@ -150,25 +158,30 @@ function animateStrike(ctx: CanvasRenderingContext2D, w: number, h: number, bolt
   const start = performance.now();
   let rafId: number;
 
+  let holdDrawn = false;
+  let holdTimerId: ReturnType<typeof setTimeout> | undefined;
+
   function frame(now: number) {
     const elapsed = now - start;
     ctx.clearRect(0, 0, w, h);
 
     if (elapsed < FADE_IN) {
-      // スムーズにフェードイン
       const t = elapsed / FADE_IN;
-      const eased = 1 - (1 - t) ** 2; // ease-out
-      drawBolts(ctx, bolts, eased);
+      drawBolts(ctx, bolts, 1 - (1 - t) ** 2);
       rafId = requestAnimationFrame(frame);
     } else if (elapsed < FADE_IN + HOLD) {
-      // 維持
-      drawBolts(ctx, bolts, 1);
-      rafId = requestAnimationFrame(frame);
+      if (!holdDrawn) {
+        // HOLD期間: 1回だけ描画してrAFを止め、HOLD終了時にフェードアウト開始
+        drawBolts(ctx, bolts, 1);
+        holdDrawn = true;
+        const remaining = FADE_IN + HOLD - elapsed;
+        holdTimerId = setTimeout(() => {
+          rafId = requestAnimationFrame(frame);
+        }, remaining);
+      }
     } else if (elapsed < FADE_IN + HOLD + FADE_OUT) {
-      // スムーズにフェードアウト
       const ft = (elapsed - FADE_IN - HOLD) / FADE_OUT;
-      const eased = 1 - (1 - ft) ** 3; // ease-out cubic
-      drawBolts(ctx, bolts, 1 - eased);
+      drawBolts(ctx, bolts, 1 - (1 - (1 - ft) ** 3));
       rafId = requestAnimationFrame(frame);
     } else {
       ctx.clearRect(0, 0, w, h);
@@ -178,7 +191,10 @@ function animateStrike(ctx: CanvasRenderingContext2D, w: number, h: number, bolt
   }
 
   rafId = requestAnimationFrame(frame);
-  return () => cancelAnimationFrame(rafId);
+  return () => {
+    cancelAnimationFrame(rafId);
+    if (holdTimerId) clearTimeout(holdTimerId);
+  };
 }
 
 function startLightningAnimation(canvas: HTMLCanvasElement): number {
@@ -203,14 +219,24 @@ function startLightningAnimation(canvas: HTMLCanvasElement): number {
 
 function fireConfetti() {
   const colors = ['#facc15', '#fbbf24', '#f59e0b', '#ffffff', '#a855f7', '#38bdf8'];
+  // モバイルではパーティクル数を半減してフレームドロップを防止
+  const s = window.innerWidth < 768 ? 0.5 : 1;
+  const p = (n: number) => Math.round(n * s);
 
-  // バースト1: 中央から大爆発
-  confetti({ particleCount: 350, spread: 160, startVelocity: 65, gravity: 0.7, origin: { x: 0.5, y: 0.0 }, colors });
+  confetti({
+    particleCount: p(350),
+    spread: 160,
+    startVelocity: 65,
+    gravity: 0.7,
+    origin: { x: 0.5, y: 0.0 },
+    colors,
+    disableForReducedMotion: true,
+  });
 
   // バースト2: 左右から
   setTimeout(() => {
     confetti({
-      particleCount: 200,
+      particleCount: p(200),
       spread: 100,
       startVelocity: 55,
       gravity: 0.75,
@@ -219,7 +245,7 @@ function fireConfetti() {
       colors,
     });
     confetti({
-      particleCount: 200,
+      particleCount: p(200),
       spread: 100,
       startVelocity: 55,
       gravity: 0.75,
@@ -232,7 +258,7 @@ function fireConfetti() {
   // バースト3: 中央上段から再噴射
   setTimeout(() => {
     confetti({
-      particleCount: 150,
+      particleCount: p(150),
       spread: 120,
       startVelocity: 50,
       gravity: 0.8,
@@ -240,7 +266,7 @@ function fireConfetti() {
       colors,
     });
     confetti({
-      particleCount: 150,
+      particleCount: p(150),
       spread: 120,
       startVelocity: 50,
       gravity: 0.8,
@@ -252,7 +278,7 @@ function fireConfetti() {
   // バースト4: 四隅から追い打ち
   setTimeout(() => {
     confetti({
-      particleCount: 120,
+      particleCount: p(120),
       spread: 80,
       startVelocity: 50,
       gravity: 0.85,
@@ -261,7 +287,7 @@ function fireConfetti() {
       colors,
     });
     confetti({
-      particleCount: 120,
+      particleCount: p(120),
       spread: 80,
       startVelocity: 50,
       gravity: 0.85,
@@ -274,7 +300,7 @@ function fireConfetti() {
   // バースト5: 最後にもう一発
   setTimeout(() => {
     confetti({
-      particleCount: 250,
+      particleCount: p(250),
       spread: 170,
       startVelocity: 60,
       gravity: 0.65,

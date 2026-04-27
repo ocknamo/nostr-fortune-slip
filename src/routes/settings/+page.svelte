@@ -122,9 +122,11 @@ onMount(() => {
       nip07Pubkey = storedNip07Pubkey;
       nip07Npub = nip19.npubEncode(storedNip07Pubkey);
       // kind:0からプロフィールを取得（非同期・バックグラウンド）
-      fetchMetadataFromRelays(storedNip07Pubkey).then((profile) => {
-        nip07Profile = profile;
-      });
+      fetchMetadataFromRelays(storedNip07Pubkey)
+        .then((profile) => {
+          nip07Profile = profile;
+        })
+        .catch(() => {});
     }
     syncRelaysWithNip65 = localStorage.getItem('syncRelaysWithNip65') === 'true';
 

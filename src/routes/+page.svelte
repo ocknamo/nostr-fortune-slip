@@ -102,13 +102,12 @@ onMount(() => {
     zapRecipientNpub = localStorage.getItem('zapRecipientNpub') || '';
     nip07LoggedIn = !!localStorage.getItem('nip07Pubkey') && isNip07Available();
 
-    // Nostr紹介QRコードを事前生成
+    // qrcodeモジュールの静的importはブラウザテスト環境で問題があるため動的import
     import('$lib/qrcode')
-      .then(({ generateQRCode }) =>
-        generateQRCode('https://welcome.nostr-jp.org/').then((url) => {
-          nostrQrCodeDataUrl = url;
-        }),
-      )
+      .then(({ generateQRCode }) => generateQRCode('https://welcome.nostr-jp.org/'))
+      .then((url) => {
+        nostrQrCodeDataUrl = url;
+      })
       .catch(() => {});
   }
 });
@@ -225,28 +224,24 @@ async function generateQRCode() {
   isLoading = true;
 
   try {
-    // 1. イベント作成（NIP-07 or 秘密鍵）
-    let textEvent: NostrEvent;
-    if (nip07LoggedIn) {
-      textEvent = await createTextEventNip07('');
-    } else {
-      const privateKeyBytes = decodeNsec(nostrPrivateKey);
-      textEvent = createTextEvent(privateKeyBytes, '');
-    }
-
-    // 3. Zap先のmetadata eventを取得・作成
     const recipientPubkey = zapRecipientNpub.trim() ? decodeNpub(zapRecipientNpub.trim()) : undefined;
-    let metadataEvent: NostrEvent;
 
+    // textEvent作成とmetadata取得を並列実行（recipientPubkey指定時は独立しているため）
+    const textEventPromise = nip07LoggedIn
+      ? createTextEventNip07('')
+      : Promise.resolve(createTextEvent(decodeNsec(nostrPrivateKey), ''));
+
+    const metadataPromise = recipientPubkey ? fetchMetadataFromRelays(recipientPubkey) : Promise.resolve(null);
+
+    const [textEvent, metadata] = await Promise.all([textEventPromise, metadataPromise]);
+
+    let metadataEvent: NostrEvent;
     if (recipientPubkey) {
-      console.log('[Fortune Slip] Fetching metadata for npub:', zapRecipientNpub);
-      const metadata = await fetchMetadataFromRelays(recipientPubkey);
       if (!metadata || !metadata.lud16) {
         errorMessage = 'Zap先のメタデータからlud16（ライトニングアドレス）が見つかりませんでした。';
         isLoading = false;
         return;
       }
-      console.log('[Fortune Slip] Found lud16:', metadata.lud16);
       metadataEvent = createMetadataEvent(recipientPubkey, metadata.lud16);
     } else {
       metadataEvent = createMetadataEvent(textEvent.pubkey, lightningAddress);
