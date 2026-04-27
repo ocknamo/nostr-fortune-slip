@@ -1,5 +1,5 @@
-import { normalizePaymentTimeMs, type CoinosPaymentResponse, type CoinosVerificationResult } from './types.js';
-import type { NostrEvent } from '../nostr/types.js';
+import { normalizePaymentTimeMs, type CoinosPaymentResponse, type CoinosVerificationResult } from './types';
+import type { NostrEvent } from '../nostr/types';
 
 const COINOS_API_BASE_URL = 'https://coinos.io/api';
 

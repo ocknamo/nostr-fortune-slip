@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { generateLuckyNumber, extractZapperPubkey, getFortuneText, shouldShowConfetti } from './fortune.js';
-import type { NostrEvent } from './types.js';
+import { generateLuckyNumber, extractZapperPubkey, getFortuneText, shouldShowConfetti } from './fortune';
+import type { NostrEvent } from './types';
 
 // Mock nostr-tools
 vi.mock('nostr-tools', () => ({

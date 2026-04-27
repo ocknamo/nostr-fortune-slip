@@ -1,5 +1,5 @@
-export { DEFAULT_RELAYS, serializeRelays, validateRelayText } from '$lib/nostr/relay.js';
-export { validateNpub } from '$lib/nostr/metadata.js';
+export { DEFAULT_RELAYS, serializeRelays, validateRelayText } from '$lib/nostr/relay';
+export { validateNpub } from '$lib/nostr/metadata';
 
 export const OPENSATS_NPUB = 'npub10pensatlcfwktnvjjw2dtem38n6rvw8g6fv73h84cuacxn4c28eqyfn34f';
 export const OPENSATS_ADDRESS = 'opensats@npub.cash';

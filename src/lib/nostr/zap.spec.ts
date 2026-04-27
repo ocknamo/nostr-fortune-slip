@@ -4,8 +4,8 @@ import {
   validateZapReceipt,
   validateZapReceiptWithCoinos,
   subscribeToZapReceipts,
-} from './zap.js';
-import type { NostrEvent } from './types.js';
+} from './zap';
+import type { NostrEvent } from './types';
 import { SimplePool } from 'nostr-tools';
 
 // Mock fetch globally
@@ -18,11 +18,11 @@ vi.mock('nostr-tools', () => ({
 }));
 
 // Mock coinos module
-vi.mock('../coinos/index.js', () => ({
+vi.mock('../coinos/index', () => ({
   verifyCoinosPayment: vi.fn(),
 }));
 
-import { verifyCoinosPayment } from '../coinos/index.js';
+import { verifyCoinosPayment } from '../coinos/index';
 const mockVerifyCoinosPayment = vi.mocked(verifyCoinosPayment);
 
 describe('getZapInvoiceFromEndpoint', () => {

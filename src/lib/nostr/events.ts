@@ -1,7 +1,7 @@
 import { nip19, nip57, finalizeEvent, type EventTemplate } from 'nostr-tools';
-import type { NostrEvent, MetadataContent } from './types.js';
-import { getRelays } from './relay.js';
-import { nip07SignEvent } from './nip07.js';
+import type { NostrEvent, MetadataContent } from './types';
+import { getRelays } from './relay';
+import { nip07SignEvent } from './nip07';
 
 export function decodeNsec(nsec: string): Uint8Array {
   if (!nsec.startsWith('nsec1')) {
