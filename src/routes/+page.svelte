@@ -69,9 +69,7 @@ let nip07LoggedIn = false; // NIP-07ログイン状態
 // 設定データを読み込み
 onMount(() => {
   if (typeof window !== 'undefined') {
-    const storedLightningAddress = localStorage.getItem('lightningAddress') || '';
-    const donateToOpenSats = localStorage.getItem('donateToOpenSats') === 'true';
-    lightningAddress = donateToOpenSats ? 'opensats@npub.cash' : storedLightningAddress;
+    lightningAddress = localStorage.getItem('lightningAddress') || '';
     nostrPrivateKey = localStorage.getItem('nostrPrivateKey') || '';
     coinosApiToken = localStorage.getItem('coinosApiToken') || '';
     const storedZapAmount = localStorage.getItem('zapAmount');

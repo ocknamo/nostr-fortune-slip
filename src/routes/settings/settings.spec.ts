@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { OPENSATS_ADDRESS, validateForm, applyDonateToOpenSats } from './settings.js';
+import { OPENSATS_ADDRESS, validateForm } from './settings.js';
 
 const validState = {
   lightningAddress: 'user@domain.com',
@@ -175,23 +175,5 @@ describe('validateForm', () => {
       const errors = validateForm({ ...validState, lightningAddress: '', nostrPrivateKey: '', pinCode: '' }, true);
       expect(errors.pinCode).toBe('PINは必須です');
     });
-  });
-});
-
-describe('applyDonateToOpenSats', () => {
-  it('有効化すると現在のアドレスを保存してOpenSatsアドレスに切り替わる', () => {
-    const result = applyDonateToOpenSats(true, 'myaddress@domain.com', '');
-    expect(result.lightningAddress).toBe(OPENSATS_ADDRESS);
-    expect(result.savedLightningAddress).toBe('myaddress@domain.com');
-  });
-
-  it('無効化すると保存済みアドレスに戻る', () => {
-    const result = applyDonateToOpenSats(false, OPENSATS_ADDRESS, 'myaddress@domain.com');
-    expect(result.lightningAddress).toBe('myaddress@domain.com');
-  });
-
-  it('有効化時に既存のsavedLightningAddressは無視される', () => {
-    const result = applyDonateToOpenSats(true, 'current@domain.com', 'old@domain.com');
-    expect(result.savedLightningAddress).toBe('current@domain.com');
   });
 });

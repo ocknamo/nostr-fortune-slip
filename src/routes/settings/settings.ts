@@ -1,6 +1,7 @@
 export { DEFAULT_RELAYS, serializeRelays, validateRelayText } from '$lib/nostr/relay.js';
 export { validateNpub } from '$lib/nostr/metadata.js';
 
+export const OPENSATS_NPUB = 'npub10pensatlcfwktnvjjw2dtem38n6rvw8g6fv73h84cuacxn4c28eqyfn34f';
 export const OPENSATS_ADDRESS = 'opensats@npub.cash';
 export const DEFAULT_CONFETTI_TEXTS = '大吉,中吉,小吉,吉,末吉';
 export const DEFAULT_NO_CONFETTI_TEXTS = '凶,大凶';
@@ -74,15 +75,4 @@ export function validateForm(state: SettingsFormState, options: boolean | Valida
   }
 
   return errors;
-}
-
-export function applyDonateToOpenSats(
-  enabled: boolean,
-  currentAddress: string,
-  savedAddress: string,
-): { lightningAddress: string; savedLightningAddress: string } {
-  if (enabled) {
-    return { lightningAddress: OPENSATS_ADDRESS, savedLightningAddress: currentAddress };
-  }
-  return { lightningAddress: savedAddress, savedLightningAddress: savedAddress };
 }

@@ -5,6 +5,7 @@ import { onMount } from 'svelte';
 
 import backgroundImage from '$lib/assets/background.jpg';
 import {
+  OPENSATS_NPUB,
   OPENSATS_ADDRESS,
   DEFAULT_CONFETTI_TEXTS,
   DEFAULT_NO_CONFETTI_TEXTS,
@@ -13,7 +14,6 @@ import {
   validateRelayText,
   validateNpub,
   validateForm as _validateForm,
-  applyDonateToOpenSats,
 } from './settings.js';
 import { isNip07Available, nip07GetPublicKey, syncRelaysFromNip65 } from '$lib/nostr/nip07.js';
 import { fetchMetadataFromRelays } from '$lib/nostr/metadata.js';
@@ -21,7 +21,7 @@ import type { MetadataContent } from '$lib/nostr';
 import { nip19 } from 'nostr-tools';
 
 // フォームデータ
-let lightningAddress = '';
+let lightningAddress = OPENSATS_ADDRESS;
 let nostrPrivateKey = '';
 let coinosApiToken = '';
 let zapAmount = 100; // Zap金額（sats）
@@ -40,9 +40,7 @@ let savedFortuneTexts = ''; // useDefaultFortuneTexts切り替え前の内容を
 let hideOmikujiMessage = false; // 紙のおみくじを促すメッセージを非表示にするフラグ
 let testMode = false; // テストモード（zapなしでくじを引ける）
 let relaysText = serializeRelays(DEFAULT_RELAYS); // リレー設定（改行区切り）
-let zapRecipientNpub = ''; // Zap先の公開鍵（npub形式、任意）
-let donateToOpenSats = false; // OpenSatsに寄付するフラグ
-let savedLightningAddress = ''; // donateToOpenSats切り替え前のアドレスを保持
+let zapRecipientNpub = OPENSATS_NPUB; // Zap先の公開鍵（npub形式、任意）
 
 function handleUseDefaultFortuneTextsChange() {
   if (useDefaultFortuneTexts) {
@@ -56,12 +54,6 @@ function handleUseDefaultFortuneTextsChange() {
   }
   // 後方互換: fortuneTextsも更新
   fortuneTexts = [confettiFortuneTexts, noConfettiFortuneTexts].filter(Boolean).join(',');
-}
-
-function handleDonateToOpenSatsChange() {
-  const result = applyDonateToOpenSats(donateToOpenSats, lightningAddress, savedLightningAddress);
-  lightningAddress = result.lightningAddress;
-  savedLightningAddress = result.savedLightningAddress;
 }
 
 // NIP-07状態
@@ -102,14 +94,7 @@ onMount(() => {
     isAuthenticated = true;
 
     // 設定データを読み込み
-    const storedLightningAddress = localStorage.getItem('lightningAddress') || '';
-    donateToOpenSats = localStorage.getItem('donateToOpenSats') === 'true';
-    if (donateToOpenSats) {
-      savedLightningAddress = storedLightningAddress;
-      lightningAddress = OPENSATS_ADDRESS;
-    } else {
-      lightningAddress = storedLightningAddress;
-    }
+    lightningAddress = localStorage.getItem('lightningAddress') || OPENSATS_ADDRESS;
     nostrPrivateKey = localStorage.getItem('nostrPrivateKey') || '';
     coinosApiToken = localStorage.getItem('coinosApiToken') || '';
     const storedZapAmount = localStorage.getItem('zapAmount');
@@ -127,7 +112,7 @@ onMount(() => {
     testMode = localStorage.getItem('testMode') === 'true';
     const storedRelays = localStorage.getItem('relays');
     relaysText = storedRelays || serializeRelays(DEFAULT_RELAYS);
-    zapRecipientNpub = localStorage.getItem('zapRecipientNpub') || '';
+    zapRecipientNpub = localStorage.getItem('zapRecipientNpub') || OPENSATS_NPUB;
 
     // NIP-07状態を復元
     nip07Available = isNip07Available();
@@ -238,8 +223,7 @@ function validateForm(): boolean {
 // 保存処理
 function handleSave() {
   if (validateForm()) {
-    localStorage.setItem('donateToOpenSats', donateToOpenSats.toString());
-    localStorage.setItem('lightningAddress', donateToOpenSats ? savedLightningAddress : lightningAddress);
+    localStorage.setItem('lightningAddress', lightningAddress);
     localStorage.setItem('nostrPrivateKey', nostrPrivateKey);
     localStorage.setItem('coinosApiToken', coinosApiToken);
     localStorage.setItem('zapAmount', zapAmount.toString());
@@ -300,7 +284,6 @@ function handleClearData() {
     localStorage.removeItem('useDefaultFortuneTexts');
     localStorage.removeItem('hideOmikujiMessage');
     localStorage.removeItem('testMode');
-    localStorage.removeItem('donateToOpenSats');
     localStorage.removeItem('relays');
     localStorage.removeItem('zapRecipientNpub');
     localStorage.removeItem('nip07Pubkey');
@@ -309,12 +292,12 @@ function handleClearData() {
     localStorage.removeItem('coinosId');
     localStorage.removeItem('coinosPassword');
 
-    // フォームをクリア
-    lightningAddress = '';
+    // フォームをクリア（デフォルト値にリセット）
+    lightningAddress = OPENSATS_ADDRESS;
     nostrPrivateKey = '';
     coinosApiToken = '';
-    zapAmount = 100; // デフォルト値にリセット
-    pinCode = '0000'; // デフォルトPINにリセット
+    zapAmount = 100;
+    pinCode = '0000';
     fortuneMin = 1;
     fortuneMax = 20;
     fortuneTexts = '';
@@ -323,9 +306,8 @@ function handleClearData() {
     useDefaultFortuneTexts = false;
     hideOmikujiMessage = false;
     testMode = false;
-    donateToOpenSats = false;
     relaysText = serializeRelays(DEFAULT_RELAYS);
-    zapRecipientNpub = '';
+    zapRecipientNpub = OPENSATS_NPUB;
     nip07LoggedIn = false;
     nip07Pubkey = '';
     nip07Npub = '';
@@ -506,21 +488,6 @@ function handleClearData() {
           {/if}
         </div>
 
-        <!-- OpenSatsに寄付する -->
-        <div class="flex items-center" class:opacity-40={zapRecipientNpub.trim()}>
-          <input
-            id="donate-opensats"
-            type="checkbox"
-            bind:checked={donateToOpenSats}
-            on:change={handleDonateToOpenSatsChange}
-            disabled={!!zapRecipientNpub.trim()}
-            class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-          />
-          <label for="donate-opensats" class="ml-2 block text-sm font-medium text-gray-700">
-            OpenSatsに寄付する
-          </label>
-        </div>
-
         <!-- ライトニングアドレス -->
         <div class:opacity-40={zapRecipientNpub.trim()}>
           <label for="lightning-address" class="block text-sm font-medium text-gray-700 mb-2">
@@ -532,11 +499,11 @@ function handleClearData() {
             type="email"
             bind:value={lightningAddress}
             placeholder="user@domain.com"
-            disabled={donateToOpenSats || !!zapRecipientNpub.trim()}
+            disabled={!!zapRecipientNpub.trim()}
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             class:border-red-500={errors.lightningAddress}
-            class:bg-gray-100={donateToOpenSats || !!zapRecipientNpub.trim()}
-            class:cursor-not-allowed={donateToOpenSats || !!zapRecipientNpub.trim()}
+            class:bg-gray-100={!!zapRecipientNpub.trim()}
+            class:cursor-not-allowed={!!zapRecipientNpub.trim()}
           />
           {#if errors.lightningAddress}
             <p class="mt-1 text-sm text-red-600">{errors.lightningAddress}</p>
