@@ -158,9 +158,6 @@ function animateStrike(ctx: CanvasRenderingContext2D, w: number, h: number, bolt
   const start = performance.now();
   let rafId: number;
 
-  let holdDrawn = false;
-  let holdTimerId: ReturnType<typeof setTimeout> | undefined;
-
   function frame(now: number) {
     const elapsed = now - start;
     ctx.clearRect(0, 0, w, h);
@@ -170,15 +167,8 @@ function animateStrike(ctx: CanvasRenderingContext2D, w: number, h: number, bolt
       drawBolts(ctx, bolts, 1 - (1 - t) ** 2);
       rafId = requestAnimationFrame(frame);
     } else if (elapsed < FADE_IN + HOLD) {
-      if (!holdDrawn) {
-        // HOLD期間: 1回だけ描画してrAFを止め、HOLD終了時にフェードアウト開始
-        drawBolts(ctx, bolts, 1);
-        holdDrawn = true;
-        const remaining = FADE_IN + HOLD - elapsed;
-        holdTimerId = setTimeout(() => {
-          rafId = requestAnimationFrame(frame);
-        }, remaining);
-      }
+      drawBolts(ctx, bolts, 1);
+      rafId = requestAnimationFrame(frame);
     } else if (elapsed < FADE_IN + HOLD + FADE_OUT) {
       const ft = (elapsed - FADE_IN - HOLD) / FADE_OUT;
       drawBolts(ctx, bolts, 1 - (1 - (1 - ft) ** 3));
@@ -191,10 +181,7 @@ function animateStrike(ctx: CanvasRenderingContext2D, w: number, h: number, bolt
   }
 
   rafId = requestAnimationFrame(frame);
-  return () => {
-    cancelAnimationFrame(rafId);
-    if (holdTimerId) clearTimeout(holdTimerId);
-  };
+  return () => cancelAnimationFrame(rafId);
 }
 
 function startLightningAnimation(canvas: HTMLCanvasElement): number {
