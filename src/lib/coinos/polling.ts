@@ -1,5 +1,5 @@
-import { getCoinosPayments } from './api.js';
-import { normalizePaymentTimeMs } from './types.js';
+import { getCoinosPayments } from './api';
+import { normalizePaymentTimeMs } from './types';
 
 /**
  * Coinosポーリングのサブスクリプション

@@ -1,4 +1,4 @@
-import type { NostrEvent } from './types.js';
+import type { NostrEvent } from './types';
 
 /**
  * ラッキーナンバーを生成（min-maxの範囲）

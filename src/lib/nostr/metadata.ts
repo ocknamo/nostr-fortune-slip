@@ -1,6 +1,6 @@
 import { nip19 } from 'nostr-tools';
-import type { MetadataContent } from './types.js';
-import { fetchEventFromRelays } from './relay.js';
+import type { MetadataContent } from './types';
+import { fetchEventFromRelays } from './relay';
 
 /** npub形式のバリデーション。正常ならnull、エラーならメッセージを返す。空文字は任意なのでOK */
 export function validateNpub(npub: string): string | null {

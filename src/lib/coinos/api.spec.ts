@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getCoinosPayments, verifyCoinosPayment, extractZapReceiptData, CoinosApiError } from './api.js';
-import type { NostrEvent } from '../nostr/types.js';
-import type { CoinosPaymentResponse } from './types.js';
+import { getCoinosPayments, verifyCoinosPayment, extractZapReceiptData, CoinosApiError } from './api';
+import type { NostrEvent } from '../nostr/types';
+import type { CoinosPaymentResponse } from './types';
 
 // グローバルfetchをモック
 const mockFetch = vi.fn();

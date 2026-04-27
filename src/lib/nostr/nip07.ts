@@ -1,6 +1,6 @@
 import type { EventTemplate } from 'nostr-tools';
-import type { NostrEvent } from './types.js';
-import { fetchEventFromRelays, serializeRelays } from './relay.js';
+import type { NostrEvent } from './types';
+import { fetchEventFromRelays, serializeRelays } from './relay';
 
 declare global {
   interface Window {
