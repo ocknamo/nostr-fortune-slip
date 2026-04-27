@@ -1,6 +1,6 @@
-import { nip19, SimplePool } from 'nostr-tools';
+import { nip19 } from 'nostr-tools';
 import type { MetadataContent } from './types.js';
-import { getRelays } from './relay.js';
+import { fetchEventFromRelays } from './relay.js';
 
 /** npub形式のバリデーション。正常ならnull、エラーならメッセージを返す。空文字は任意なのでOK */
 export function validateNpub(npub: string): string | null {
@@ -39,25 +39,12 @@ export function decodeNpub(npub: string): string {
 
 /** リレーからkind:0メタデータを取得。見つからない/タイムアウトならnullを返す */
 export async function fetchMetadataFromRelays(pubkeyHex: string, timeoutMs = 10000): Promise<MetadataContent | null> {
-  const pool = new SimplePool();
-  const relays = getRelays();
+  const event = await fetchEventFromRelays({ kinds: [0], authors: [pubkeyHex] }, timeoutMs);
+  if (!event) return null;
 
   try {
-    const event = await Promise.race([
-      pool.get(relays, { kinds: [0], authors: [pubkeyHex] }),
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs)),
-    ]);
-
-    if (!event) return null;
-
-    try {
-      return JSON.parse(event.content) as MetadataContent;
-    } catch {
-      return null;
-    }
+    return JSON.parse(event.content) as MetadataContent;
   } catch {
     return null;
-  } finally {
-    pool.close(relays);
   }
 }

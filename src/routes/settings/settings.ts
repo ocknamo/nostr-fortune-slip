@@ -22,12 +22,8 @@ export interface ValidateFormOptions {
   skipNostrKey?: boolean;
 }
 
-export function validateForm(state: SettingsFormState, options: boolean | ValidateFormOptions = false): SettingsErrors {
+export function validateForm(state: SettingsFormState, opts: ValidateFormOptions = {}): SettingsErrors {
   const errors: SettingsErrors = {};
-
-  // 後方互換: boolean の場合は両方スキップ（testMode用）
-  const opts: ValidateFormOptions =
-    typeof options === 'boolean' ? { skipLightningAddress: options, skipNostrKey: options } : options;
 
   // ライトニングアドレス
   if (!opts.skipLightningAddress) {

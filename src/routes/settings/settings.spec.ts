@@ -146,33 +146,51 @@ describe('validateForm', () => {
 
   describe('テストモード (testMode=true)', () => {
     it('lightningAddressが空でもエラーなし', () => {
-      const errors = validateForm({ ...validState, lightningAddress: '' }, true);
+      const errors = validateForm(
+        { ...validState, lightningAddress: '' },
+        { skipLightningAddress: true, skipNostrKey: true },
+      );
       expect(errors.lightningAddress).toBeUndefined();
     });
 
     it('nostrPrivateKeyが空でもエラーなし', () => {
-      const errors = validateForm({ ...validState, nostrPrivateKey: '' }, true);
+      const errors = validateForm(
+        { ...validState, nostrPrivateKey: '' },
+        { skipLightningAddress: true, skipNostrKey: true },
+      );
       expect(errors.nostrPrivateKey).toBeUndefined();
     });
 
     it('両方空でもエラーなし', () => {
-      const errors = validateForm({ ...validState, lightningAddress: '', nostrPrivateKey: '' }, true);
+      const errors = validateForm(
+        { ...validState, lightningAddress: '', nostrPrivateKey: '' },
+        { skipLightningAddress: true, skipNostrKey: true },
+      );
       expect(errors.lightningAddress).toBeUndefined();
       expect(errors.nostrPrivateKey).toBeUndefined();
     });
 
     it('入力済みのlightningAddressが不正形式の場合はエラー', () => {
-      const errors = validateForm({ ...validState, lightningAddress: 'notanemail' }, true);
+      const errors = validateForm(
+        { ...validState, lightningAddress: 'notanemail' },
+        { skipLightningAddress: true, skipNostrKey: true },
+      );
       expect(errors.lightningAddress).toBeDefined();
     });
 
     it('入力済みのnostrPrivateKeyがnsec1で始まらない場合はエラー', () => {
-      const errors = validateForm({ ...validState, nostrPrivateKey: 'npub1somekey' }, true);
+      const errors = validateForm(
+        { ...validState, nostrPrivateKey: 'npub1somekey' },
+        { skipLightningAddress: true, skipNostrKey: true },
+      );
       expect(errors.nostrPrivateKey).toBeDefined();
     });
 
     it('pinCode・zapAmount・fortuneMin/Maxのバリデーションは通常通り動作する', () => {
-      const errors = validateForm({ ...validState, lightningAddress: '', nostrPrivateKey: '', pinCode: '' }, true);
+      const errors = validateForm(
+        { ...validState, lightningAddress: '', nostrPrivateKey: '', pinCode: '' },
+        { skipLightningAddress: true, skipNostrKey: true },
+      );
       expect(errors.pinCode).toBe('PINは必須です');
     });
   });

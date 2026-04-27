@@ -1,9 +1,7 @@
-import { SimplePool } from 'nostr-tools';
 import type { EventTemplate } from 'nostr-tools';
 import type { NostrEvent } from './types.js';
-import { getRelays, serializeRelays } from './relay.js';
+import { fetchEventFromRelays, serializeRelays } from './relay.js';
 
-// NIP-07 window.nostr の型定義
 declare global {
   interface Window {
     nostr?: {
@@ -34,27 +32,13 @@ export async function nip07SignEvent(event: EventTemplate): Promise<NostrEvent> 
   return window.nostr!.signEvent(event);
 }
 
-/** リレーからkind:10002 (NIP-65 Relay List Metadata) を取得してリレーURL一覧を返す */
+/** リレーからkind:10002 (NIP-65) を取得してリレーURL一覧を返す */
 export async function fetchRelayListFromRelays(pubkeyHex: string, timeoutMs = 10000): Promise<string[] | null> {
-  const pool = new SimplePool();
-  const relays = getRelays();
+  const event = await fetchEventFromRelays({ kinds: [10002], authors: [pubkeyHex] }, timeoutMs);
+  if (!event) return null;
 
-  try {
-    const event = await Promise.race([
-      pool.get(relays, { kinds: [10002], authors: [pubkeyHex] }),
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs)),
-    ]);
-
-    if (!event) return null;
-
-    const relayUrls = event.tags.filter((tag) => tag[0] === 'r' && tag[1]).map((tag) => tag[1]);
-
-    return relayUrls.length > 0 ? relayUrls : null;
-  } catch {
-    return null;
-  } finally {
-    pool.close(relays);
-  }
+  const relayUrls = event.tags.filter((tag) => tag[0] === 'r' && tag[1]).map((tag) => tag[1]);
+  return relayUrls.length > 0 ? relayUrls : null;
 }
 
 /** kind:10002からリレーを取得し、改行区切り文字列として返す。見つからなければnull */

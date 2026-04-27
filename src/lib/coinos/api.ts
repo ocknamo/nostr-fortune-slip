@@ -1,4 +1,4 @@
-import type { CoinosPaymentResponse, CoinosVerificationResult } from './types.js';
+import { normalizePaymentTimeMs, type CoinosPaymentResponse, type CoinosVerificationResult } from './types.js';
 import type { NostrEvent } from '../nostr/types.js';
 
 const COINOS_API_BASE_URL = 'https://coinos.io/api';
@@ -150,8 +150,7 @@ export async function verifyCoinosPayment(
         return false;
       }
 
-      // 時間窓内の支払いかチェック（created は Unix秒の場合とミリ秒の場合がある）
-      const paymentTimeMs = payment.created < 1e12 ? payment.created * 1000 : payment.created;
+      const paymentTimeMs = normalizePaymentTimeMs(payment.created);
       if (paymentTimeMs < windowStart || paymentTimeMs > windowEnd) {
         console.debug('[Coinos Verification] Payment time outside window:', new Date(paymentTimeMs));
         return false;

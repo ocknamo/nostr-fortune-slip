@@ -1,25 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { decodeNpub, fetchMetadataFromRelays, validateNpub } from './metadata.js';
 
-// Mock nostr-tools
-vi.mock('nostr-tools', async () => {
-  const actual = await vi.importActual('nostr-tools');
-  return {
-    ...actual,
-    SimplePool: vi.fn(),
-  };
-});
-
 // Mock relay module
+const mockFetchEvent = vi.fn();
 vi.mock('./relay.js', () => ({
-  getRelays: () => ['wss://relay1.test/', 'wss://relay2.test/'],
-  DEFAULT_RELAYS: ['wss://relay1.test/', 'wss://relay2.test/'],
-  parseRelays: (t: string) => t.split('\n').filter(Boolean),
-  serializeRelays: (r: string[]) => r.join('\n'),
-  validateRelayText: () => null,
+  fetchEventFromRelays: (...args: unknown[]) => mockFetchEvent(...args),
 }));
-
-import { SimplePool } from 'nostr-tools';
 
 describe('validateNpub', () => {
   it('空文字列はエラーなし（任意フィールド）', () => {
@@ -41,7 +27,6 @@ describe('validateNpub', () => {
   });
 
   it('正しいnpub形式はエラーなし', () => {
-    // 実際の有効なnpubを使用（32バイトの公開鍵からエンコード）
     const { nip19 } = require('nostr-tools');
     const dummyHex = 'a'.repeat(64);
     const validNpub = nip19.npubEncode(dummyHex);
@@ -67,29 +52,16 @@ describe('decodeNpub', () => {
 });
 
 describe('fetchMetadataFromRelays', () => {
-  let mockPoolInstance: {
-    get: ReturnType<typeof vi.fn>;
-    close: ReturnType<typeof vi.fn>;
-  };
-
   beforeEach(() => {
-    mockPoolInstance = {
-      get: vi.fn(),
-      close: vi.fn(),
-    };
-    vi.mocked(SimplePool).mockImplementation(() => mockPoolInstance as unknown as InstanceType<typeof SimplePool>);
+    mockFetchEvent.mockReset();
   });
 
   it('kind:0イベントからlud16を取得する', async () => {
     const pubkeyHex = 'a'.repeat(64);
-    mockPoolInstance.get.mockResolvedValue({
+    mockFetchEvent.mockResolvedValue({
       kind: 0,
       pubkey: pubkeyHex,
       content: JSON.stringify({ lud16: 'user@getalby.com', name: 'testuser' }),
-      created_at: 1000,
-      id: 'event-id',
-      sig: 'sig',
-      tags: [],
     });
 
     const result = await fetchMetadataFromRelays(pubkeyHex);
@@ -99,35 +71,21 @@ describe('fetchMetadataFromRelays', () => {
   });
 
   it('イベントが見つからない場合はnullを返す', async () => {
-    mockPoolInstance.get.mockResolvedValue(null);
+    mockFetchEvent.mockResolvedValue(null);
     const result = await fetchMetadataFromRelays('b'.repeat(64));
     expect(result).toBeNull();
   });
 
   it('contentのJSONが不正な場合はnullを返す', async () => {
-    mockPoolInstance.get.mockResolvedValue({
-      kind: 0,
-      pubkey: 'b'.repeat(64),
-      content: 'not-json',
-      created_at: 1000,
-      id: 'event-id',
-      sig: 'sig',
-      tags: [],
-    });
-
+    mockFetchEvent.mockResolvedValue({ kind: 0, content: 'not-json' });
     const result = await fetchMetadataFromRelays('b'.repeat(64));
     expect(result).toBeNull();
   });
 
   it('lud16がない場合もMetadataContentを返す', async () => {
-    mockPoolInstance.get.mockResolvedValue({
+    mockFetchEvent.mockResolvedValue({
       kind: 0,
-      pubkey: 'c'.repeat(64),
       content: JSON.stringify({ name: 'no-lightning' }),
-      created_at: 1000,
-      id: 'event-id',
-      sig: 'sig',
-      tags: [],
     });
 
     const result = await fetchMetadataFromRelays('c'.repeat(64));
@@ -136,25 +94,21 @@ describe('fetchMetadataFromRelays', () => {
     expect(result!.name).toBe('no-lightning');
   });
 
-  it('pool.getにkind:0フィルターを渡す', async () => {
+  it('fetchEventFromRelaysにkind:0フィルターを渡す', async () => {
     const pubkeyHex = 'd'.repeat(64);
-    mockPoolInstance.get.mockResolvedValue(null);
+    mockFetchEvent.mockResolvedValue(null);
 
     await fetchMetadataFromRelays(pubkeyHex);
 
-    expect(mockPoolInstance.get).toHaveBeenCalledWith(
-      expect.any(Array),
-      expect.objectContaining({
-        kinds: [0],
-        authors: [pubkeyHex],
-      }),
+    expect(mockFetchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ kinds: [0], authors: [pubkeyHex] }),
+      expect.any(Number),
     );
   });
 
-  it('タイムアウトした場合はnullを返す', async () => {
-    mockPoolInstance.get.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve(null), 20000)));
-
-    const result = await fetchMetadataFromRelays('e'.repeat(64), 100);
-    expect(result).toBeNull();
+  it('タイムアウト値を渡せる', async () => {
+    mockFetchEvent.mockResolvedValue(null);
+    await fetchMetadataFromRelays('e'.repeat(64), 5000);
+    expect(mockFetchEvent).toHaveBeenCalledWith(expect.anything(), 5000);
   });
 });

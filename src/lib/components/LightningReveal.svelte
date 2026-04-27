@@ -292,15 +292,20 @@ onMount(() => {
 
   const totalMs = startLightningAnimation(canvasEl);
 
-  setTimeout(() => {
+  const revealTimer = setTimeout(() => {
     phase = 'reveal';
     if (showConfetti) fireConfetti();
   }, totalMs);
 
-  setTimeout(() => {
+  const doneTimer = setTimeout(() => {
     phase = 'done';
     onComplete?.();
   }, totalMs + 2500);
+
+  return () => {
+    clearTimeout(revealTimer);
+    clearTimeout(doneTimer);
+  };
 });
 </script>
 

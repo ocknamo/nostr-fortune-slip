@@ -1,4 +1,5 @@
 import { getCoinosPayments } from './api.js';
+import { normalizePaymentTimeMs } from './types.js';
 
 /**
  * Coinosポーリングのサブスクリプション
@@ -53,8 +54,7 @@ export function startCoinosPolling(
           return false;
         }
 
-        // 時間窓内の支払いかチェック（created は Unix秒の場合とミリ秒の場合がある）
-        const paymentTimeMs = payment.created < 1e12 ? payment.created * 1000 : payment.created;
+        const paymentTimeMs = normalizePaymentTimeMs(payment.created);
         if (paymentTimeMs < windowStart || paymentTimeMs > windowEnd) {
           return false;
         }

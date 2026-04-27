@@ -1,3 +1,6 @@
+import { SimplePool } from 'nostr-tools';
+import type { Event, Filter } from 'nostr-tools';
+
 // デフォルトリレー
 export const DEFAULT_RELAYS = [
   'wss://relay.damus.io/',
@@ -44,4 +47,21 @@ export function getRelays(): string[] {
     return DEFAULT_RELAYS;
   }
   return parseRelays(stored);
+}
+
+/** リレーからフィルターに一致するイベントを1件取得。タイムアウト/エラー時はnull */
+export async function fetchEventFromRelays(filter: Filter, timeoutMs = 10000): Promise<Event | null> {
+  const pool = new SimplePool();
+  const relays = getRelays();
+
+  try {
+    return await Promise.race([
+      pool.get(relays, filter),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs)),
+    ]);
+  } catch {
+    return null;
+  } finally {
+    pool.close(relays);
+  }
 }

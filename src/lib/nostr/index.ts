@@ -21,7 +21,12 @@ export {
 } from './nip07.js';
 
 // Zap関連をエクスポート
-export { getZapInvoiceFromEndpoint, validateZapReceipt, subscribeToZapReceipts } from './zap.js';
+export {
+  getZapInvoiceFromEndpoint,
+  validateZapReceipt,
+  subscribeToZapReceipts,
+  type ZapSubscriptionOptions,
+} from './zap.js';
 
 // Fortune機能をエクスポート
 export { generateLuckyNumber, getFortuneText, shouldShowConfetti } from './fortune.js';
@@ -29,7 +34,14 @@ export { generateLuckyNumber, getFortuneText, shouldShowConfetti } from './fortu
 // ランダム値生成をエクスポート
 export { generateRandomBase64 } from './random.js';
 
-export { DEFAULT_RELAYS, getRelays, parseRelays, serializeRelays, validateRelayText } from './relay.js';
+export {
+  DEFAULT_RELAYS,
+  getRelays,
+  parseRelays,
+  serializeRelays,
+  validateRelayText,
+  fetchEventFromRelays,
+} from './relay.js';
 
 // メタデータ取得関連をエクスポート
 export { decodeNpub, fetchMetadataFromRelays, validateNpub } from './metadata.js';

@@ -7,29 +7,15 @@ import {
   syncRelaysFromNip65,
 } from './nip07.js';
 
-// Mock nostr-tools
-vi.mock('nostr-tools', async () => {
-  const actual = await vi.importActual('nostr-tools');
-  return {
-    ...actual,
-    SimplePool: vi.fn(),
-  };
-});
-
 // Mock relay module
+const mockFetchEvent = vi.fn();
 vi.mock('./relay.js', () => ({
-  getRelays: () => ['wss://relay1.test/'],
-  DEFAULT_RELAYS: ['wss://relay1.test/'],
-  parseRelays: (t: string) => t.split('\n').filter(Boolean),
+  fetchEventFromRelays: (...args: unknown[]) => mockFetchEvent(...args),
   serializeRelays: (r: string[]) => r.join('\n'),
-  validateRelayText: () => null,
 }));
-
-import { SimplePool } from 'nostr-tools';
 
 describe('isNip07Available', () => {
   afterEach(() => {
-    // window.nostr をクリーンアップ
     vi.stubGlobal('window', globalThis.window);
   });
 
@@ -76,18 +62,8 @@ describe('nip07SignEvent', () => {
   });
 
   it('window.nostr.signEvent()を呼び出して署名済みイベントを返す', async () => {
-    const template = {
-      kind: 1,
-      created_at: 1000,
-      tags: [],
-      content: 'test',
-    };
-    const signedEvent = {
-      ...template,
-      id: 'event-id',
-      pubkey: 'a'.repeat(64),
-      sig: 'sig-value',
-    };
+    const template = { kind: 1, created_at: 1000, tags: [], content: 'test' };
+    const signedEvent = { ...template, id: 'event-id', pubkey: 'a'.repeat(64), sig: 'sig-value' };
 
     vi.stubGlobal('window', {
       nostr: { getPublicKey: vi.fn(), signEvent: vi.fn().mockResolvedValue(signedEvent) },
@@ -105,28 +81,13 @@ describe('nip07SignEvent', () => {
 });
 
 describe('fetchRelayListFromRelays', () => {
-  let mockPoolInstance: {
-    get: ReturnType<typeof vi.fn>;
-    close: ReturnType<typeof vi.fn>;
-  };
-
   beforeEach(() => {
-    mockPoolInstance = {
-      get: vi.fn(),
-      close: vi.fn(),
-    };
-    vi.mocked(SimplePool).mockImplementation(() => mockPoolInstance as unknown as InstanceType<typeof SimplePool>);
+    mockFetchEvent.mockReset();
   });
 
   it('kind:10002イベントからリレー一覧を取得する', async () => {
-    const pubkeyHex = 'a'.repeat(64);
-    mockPoolInstance.get.mockResolvedValue({
+    mockFetchEvent.mockResolvedValue({
       kind: 10002,
-      pubkey: pubkeyHex,
-      content: '',
-      created_at: 1000,
-      id: 'event-id',
-      sig: 'sig',
       tags: [
         ['r', 'wss://relay.damus.io/'],
         ['r', 'wss://yabu.me', 'read'],
@@ -134,76 +95,43 @@ describe('fetchRelayListFromRelays', () => {
       ],
     });
 
-    const result = await fetchRelayListFromRelays(pubkeyHex);
+    const result = await fetchRelayListFromRelays('a'.repeat(64));
     expect(result).toEqual(['wss://relay.damus.io/', 'wss://yabu.me', 'wss://nos.lol']);
   });
 
   it('kind:10002イベントが見つからない場合nullを返す', async () => {
-    mockPoolInstance.get.mockResolvedValue(null);
+    mockFetchEvent.mockResolvedValue(null);
     const result = await fetchRelayListFromRelays('b'.repeat(64));
     expect(result).toBeNull();
   });
 
   it('rタグがない場合nullを返す', async () => {
-    mockPoolInstance.get.mockResolvedValue({
-      kind: 10002,
-      pubkey: 'c'.repeat(64),
-      content: '',
-      created_at: 1000,
-      id: 'event-id',
-      sig: 'sig',
-      tags: [],
-    });
-
+    mockFetchEvent.mockResolvedValue({ kind: 10002, tags: [] });
     const result = await fetchRelayListFromRelays('c'.repeat(64));
     expect(result).toBeNull();
   });
 
-  it('pool.getにkind:10002フィルターを渡す', async () => {
+  it('fetchEventFromRelaysにkind:10002フィルターを渡す', async () => {
     const pubkeyHex = 'd'.repeat(64);
-    mockPoolInstance.get.mockResolvedValue(null);
+    mockFetchEvent.mockResolvedValue(null);
 
     await fetchRelayListFromRelays(pubkeyHex);
 
-    expect(mockPoolInstance.get).toHaveBeenCalledWith(
-      expect.any(Array),
-      expect.objectContaining({
-        kinds: [10002],
-        authors: [pubkeyHex],
-      }),
+    expect(mockFetchEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ kinds: [10002], authors: [pubkeyHex] }),
+      expect.any(Number),
     );
-  });
-
-  it('タイムアウトした場合nullを返す', async () => {
-    mockPoolInstance.get.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve(null), 20000)));
-    const result = await fetchRelayListFromRelays('e'.repeat(64), 100);
-    expect(result).toBeNull();
   });
 });
 
 describe('syncRelaysFromNip65', () => {
-  let mockPoolInstance: {
-    get: ReturnType<typeof vi.fn>;
-    close: ReturnType<typeof vi.fn>;
-  };
-
   beforeEach(() => {
-    mockPoolInstance = {
-      get: vi.fn(),
-      close: vi.fn(),
-    };
-    vi.mocked(SimplePool).mockImplementation(() => mockPoolInstance as unknown as InstanceType<typeof SimplePool>);
+    mockFetchEvent.mockReset();
   });
 
   it('kind:10002からリレーを取得して改行区切り文字列を返す', async () => {
-    const pubkeyHex = 'a'.repeat(64);
-    mockPoolInstance.get.mockResolvedValue({
+    mockFetchEvent.mockResolvedValue({
       kind: 10002,
-      pubkey: pubkeyHex,
-      content: '',
-      created_at: 1000,
-      id: 'event-id',
-      sig: 'sig',
       tags: [
         ['r', 'wss://relay.damus.io/'],
         ['r', 'wss://yabu.me', 'read'],
@@ -211,27 +139,18 @@ describe('syncRelaysFromNip65', () => {
       ],
     });
 
-    const result = await syncRelaysFromNip65(pubkeyHex);
+    const result = await syncRelaysFromNip65('a'.repeat(64));
     expect(result).toBe('wss://relay.damus.io/\nwss://yabu.me\nwss://nos.lol');
   });
 
   it('kind:10002が見つからない場合nullを返す', async () => {
-    mockPoolInstance.get.mockResolvedValue(null);
+    mockFetchEvent.mockResolvedValue(null);
     const result = await syncRelaysFromNip65('b'.repeat(64));
     expect(result).toBeNull();
   });
 
   it('rタグが空の場合nullを返す', async () => {
-    mockPoolInstance.get.mockResolvedValue({
-      kind: 10002,
-      pubkey: 'c'.repeat(64),
-      content: '',
-      created_at: 1000,
-      id: 'event-id',
-      sig: 'sig',
-      tags: [],
-    });
-
+    mockFetchEvent.mockResolvedValue({ kind: 10002, tags: [] });
     const result = await syncRelaysFromNip65('c'.repeat(64));
     expect(result).toBeNull();
   });

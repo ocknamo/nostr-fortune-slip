@@ -432,7 +432,7 @@ describe('subscribeToZapReceipts', () => {
     };
     mockPoolInstance.subscribeMany.mockReturnValue(mockSubscription);
 
-    const subscription = subscribeToZapReceipts(targetEventId, zapRequest, onZapReceived);
+    const subscription = subscribeToZapReceipts({ targetEventId, zapRequest, onZapReceived });
 
     expect(mockPoolInstance.subscribeMany).toHaveBeenCalledWith(
       expect.any(Array), // relays
@@ -473,7 +473,7 @@ describe('subscribeToZapReceipts', () => {
 
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    subscribeToZapReceipts(targetEventId, zapRequest, onZapReceived, 5000);
+    subscribeToZapReceipts({ targetEventId, zapRequest, onZapReceived, timeoutMs: 5000 });
 
     // Fast forward time to trigger timeout
     vi.advanceTimersByTime(5000);
@@ -505,7 +505,7 @@ describe('subscribeToZapReceipts', () => {
 
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    const subscription = subscribeToZapReceipts(targetEventId, zapRequest, onZapReceived);
+    const subscription = subscribeToZapReceipts({ targetEventId, zapRequest, onZapReceived });
 
     subscription.stop();
 
@@ -536,7 +536,7 @@ describe('subscribeToZapReceipts', () => {
     const mockSubscription = { close: vi.fn() };
     mockPoolInstance.subscribeMany.mockReturnValue(mockSubscription);
 
-    subscribeToZapReceipts(targetEventId, zapRequest, onZapReceived, 300000, undefined, undefined, recipientPubkey);
+    subscribeToZapReceipts({ targetEventId, zapRequest, onZapReceived, recipientPubkey });
 
     const filterArg = mockPoolInstance.subscribeMany.mock.calls[0][1];
     expect(filterArg).toHaveProperty('#p', [recipientPubkey]);
@@ -559,7 +559,7 @@ describe('subscribeToZapReceipts', () => {
     const mockSubscription = { close: vi.fn() };
     mockPoolInstance.subscribeMany.mockReturnValue(mockSubscription);
 
-    subscribeToZapReceipts(targetEventId, zapRequest, onZapReceived);
+    subscribeToZapReceipts({ targetEventId, zapRequest, onZapReceived });
 
     const filterArg = mockPoolInstance.subscribeMany.mock.calls[0][1];
     expect(filterArg).toHaveProperty('#e', [targetEventId]);

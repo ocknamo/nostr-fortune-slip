@@ -235,24 +235,21 @@ async function generateQRCode() {
     }
 
     // 3. Zap先のmetadata eventを取得・作成
+    const recipientPubkey = zapRecipientNpub.trim() ? decodeNpub(zapRecipientNpub.trim()) : undefined;
     let metadataEvent: NostrEvent;
 
-    if (zapRecipientNpub.trim()) {
-      // npub設定がある場合: リレーからkind:0を取得してlud16を使う
-      const recipientPubkeyHex = decodeNpub(zapRecipientNpub.trim());
+    if (recipientPubkey) {
       console.log('[Fortune Slip] Fetching metadata for npub:', zapRecipientNpub);
-      const metadata = await fetchMetadataFromRelays(recipientPubkeyHex);
+      const metadata = await fetchMetadataFromRelays(recipientPubkey);
       if (!metadata || !metadata.lud16) {
         errorMessage = 'Zap先のメタデータからlud16（ライトニングアドレス）が見つかりませんでした。';
         isLoading = false;
         return;
       }
       console.log('[Fortune Slip] Found lud16:', metadata.lud16);
-      metadataEvent = createMetadataEvent(recipientPubkeyHex, metadata.lud16);
+      metadataEvent = createMetadataEvent(recipientPubkey, metadata.lud16);
     } else {
-      // 従来の方式: 自分のライトニングアドレスを使う
-      const recipientPubkey = textEvent.pubkey;
-      metadataEvent = createMetadataEvent(recipientPubkey, lightningAddress);
+      metadataEvent = createMetadataEvent(textEvent.pubkey, lightningAddress);
     }
 
     // 4. zapUrl取得
@@ -271,9 +268,6 @@ async function generateQRCode() {
     // 1 sat = 1000 millisats
     const satsAmount = zapAmount * 1000;
 
-    // 6. Zapリクエストを作成（ランダム値をcommentに埋め込む）
-    // zapRecipientNpub が設定されている場合は ProfileZap（recipient公開鍵宛）
-    const recipientPubkey = zapRecipientNpub.trim() ? decodeNpub(zapRecipientNpub.trim()) : undefined;
     let zapRequest: NostrEvent;
     if (nip07LoggedIn) {
       zapRequest = await createZapRequestNip07(textEvent, satsAmount, paymentId, recipientPubkey);
@@ -292,15 +286,14 @@ async function generateQRCode() {
     currentZapRequest = zapRequest;
     currentTargetEventId = textEvent.id;
 
-    zapSubscription = subscribeToZapReceipts(
-      textEvent.id,
+    zapSubscription = subscribeToZapReceipts({
+      targetEventId: textEvent.id,
       zapRequest,
-      onZapDetected,
-      300000, // 5分タイムアウト
-      coinosApiToken, // Coinos API Token（オプション）
-      onZapError, // エラーコールバック
-      recipientPubkey, // ProfileZap時のrecipient公開鍵
-    );
+      onZapReceived: onZapDetected,
+      coinosApiToken,
+      onZapError,
+      recipientPubkey,
+    });
 
     // 10. Coinos APIポーリングを開始（トークンが設定されている場合のフォールバック）
     if (coinosApiToken.trim()) {

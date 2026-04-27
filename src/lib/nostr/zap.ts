@@ -149,15 +149,26 @@ export async function validateZapReceiptWithCoinos(
  * QRコード表示直後から開始し、zapが検知されたらコールバックを実行
  * Coinos API検証も含む
  */
-export function subscribeToZapReceipts(
-  targetEventId: string,
-  zapRequest: NostrEvent,
-  onZapReceived: (zapReceipt: NostrEvent) => void,
-  timeoutMs: number = 300000, // 5分のタイムアウト
-  coinosApiToken?: string, // Coinos API Token（オプション）
-  onZapError?: (error: string) => void, // エラーコールバック（オプション）
-  recipientPubkey?: string, // ProfileZap時のrecipient公開鍵
-): ZapReceiptSubscription {
+export interface ZapSubscriptionOptions {
+  targetEventId: string;
+  zapRequest: NostrEvent;
+  onZapReceived: (zapReceipt: NostrEvent) => void;
+  timeoutMs?: number;
+  coinosApiToken?: string;
+  onZapError?: (error: string) => void;
+  recipientPubkey?: string;
+}
+
+export function subscribeToZapReceipts(opts: ZapSubscriptionOptions): ZapReceiptSubscription {
+  const {
+    targetEventId,
+    zapRequest,
+    onZapReceived,
+    timeoutMs = 300000,
+    coinosApiToken,
+    onZapError,
+    recipientPubkey,
+  } = opts;
   const pool = new SimplePool();
   const relays = getRelays();
   const subscriptionId = `zap-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
