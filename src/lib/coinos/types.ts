@@ -35,11 +35,6 @@ export interface CoinosPaymentResponse {
   outgoing: Record<string, any>;
 }
 
-/** Coinos APIのcreatedフィールド（Unix秒 or ミリ秒）をミリ秒に正規化 */
-export function normalizePaymentTimeMs(created: number): number {
-  return created < 1e12 ? created * 1000 : created;
-}
-
 export interface CoinosApiError {
   error: string;
   message: string;

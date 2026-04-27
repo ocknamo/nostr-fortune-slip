@@ -1,5 +1,5 @@
-import { normalizePaymentTimeMs, type CoinosPaymentResponse, type CoinosVerificationResult } from './types';
-import type { NostrEvent } from '../nostr/types';
+import type { CoinosPaymentResponse, CoinosVerificationResult } from './types.js';
+import type { NostrEvent } from '../nostr/types.js';
 
 const COINOS_API_BASE_URL = 'https://coinos.io/api';
 
@@ -132,13 +132,12 @@ export async function verifyCoinosPayment(
     }
 
     // Coinos APIから支払い履歴を取得
-    const paymentsData = await getCoinosPayments(token, 50);
+    const paymentsData = await getCoinosPayments(token, 10); // 最大10件取得
 
     // Zapレシートの作成時刻を基準にした時間窓を設定
-    // 支払いはZap Receiptより前に発生するため、窓は過去方向に開く
     const zapTimestamp = zapReceipt.created_at * 1000; // ミリ秒に変換
-    const windowStart = zapTimestamp - timeWindowMs;
-    const windowEnd = zapTimestamp + 60000; // 1分の余裕
+    const windowStart = zapTimestamp;
+    const windowEnd = zapTimestamp + timeWindowMs;
 
     console.debug('[Coinos Verification] Looking for payment with preimage:', zapData.preimage);
     console.debug('[Coinos Verification] Time window:', new Date(windowStart), 'to', new Date(windowEnd));
@@ -150,9 +149,10 @@ export async function verifyCoinosPayment(
         return false;
       }
 
-      const paymentTimeMs = normalizePaymentTimeMs(payment.created);
-      if (paymentTimeMs < windowStart || paymentTimeMs > windowEnd) {
-        console.debug('[Coinos Verification] Payment time outside window:', new Date(paymentTimeMs));
+      // 時間窓内の支払いかチェック
+      const paymentTime = payment.created;
+      if (paymentTime < windowStart || paymentTime > windowEnd) {
+        console.debug('[Coinos Verification] Payment time outside window:', new Date(paymentTime));
         return false;
       }
 
