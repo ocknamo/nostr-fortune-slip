@@ -33,6 +33,7 @@ import backgroundImage from '$lib/assets/background.jpg';
 // UI状態
 let isLoading = false;
 let qrCodeDataUrl = '';
+let nostrQrCodeDataUrl = ''; // Nostr紹介QRコード
 let errorMessage = '';
 let isWaitingForZap = false;
 let zapDetected = false;
@@ -100,6 +101,15 @@ onMount(() => {
     testMode = localStorage.getItem('testMode') === 'true';
     zapRecipientNpub = localStorage.getItem('zapRecipientNpub') || '';
     nip07LoggedIn = !!localStorage.getItem('nip07Pubkey') && isNip07Available();
+
+    // Nostr紹介QRコードを事前生成
+    import('$lib/qrcode')
+      .then(({ generateQRCode }) =>
+        generateQRCode('https://welcome.nostr-jp.org/').then((url) => {
+          nostrQrCodeDataUrl = url;
+        }),
+      )
+      .catch(() => {});
   }
 });
 
@@ -330,11 +340,11 @@ function handleLightningComplete() {
 }
 
 function startAutoReset() {
-  // 20秒後に自動リセット
+  // 5分後に自動リセット
   autoResetTimerId = window.setTimeout(() => {
-    console.log('[Fortune Slip] Auto-resetting after 20 seconds');
+    console.log('[Fortune Slip] Auto-resetting after 5 minutes');
     resetFortuneSlip();
-  }, 20000);
+  }, 300000);
 }
 </script>
 
@@ -441,32 +451,47 @@ function startAutoReset() {
 
       <!-- Zap検知後のランダム数字表示 -->
       {#if zapDetected && !isAnimationPlaying && !isLightningPlaying}
-      <div class="mb-6 bg-white pl-4 pr-4 w-50 animate-fade-in">
-        <div class="flex flex-col justify-center mb-4 border-b pb-4">
-          {#if !hideOmikujiMessage}
-          <div class="h-36 flex items-center justify-center">
-            <span class="font-bold text-rose-500 text-7xl mb-4">{randomNumber}</span>
-          </div>
-          {/if}
-          {#if fortuneTextForNumber}
-            <div class="text-center {hideOmikujiMessage ? 'h-36 flex items-center justify-center' : ''}">
-              <p class="{hideOmikujiMessage ? 'text-6xl font-extrabold text-rose-500' : 'text-2xl font-semibold text-gray-800'}">{fortuneTextForNumber}</p>
+      <div class="flex gap-4 items-start animate-fade-in">
+        <!-- おみくじ結果 -->
+        <div class="bg-white pl-4 pr-4 w-50 flex-shrink-0">
+          <div class="flex flex-col justify-center mb-4 border-b pb-4">
+            {#if !hideOmikujiMessage}
+            <div class="h-36 flex items-center justify-center">
+              <span class="font-bold text-rose-500 text-7xl mb-4">{randomNumber}</span>
             </div>
+            {/if}
+            {#if fortuneTextForNumber}
+              <div class="text-center {hideOmikujiMessage ? 'h-36 flex items-center justify-center' : ''}">
+                <p class="{hideOmikujiMessage ? 'text-6xl font-extrabold text-rose-500' : 'text-2xl font-semibold text-gray-800'}">{fortuneTextForNumber}</p>
+              </div>
+            {/if}
+          </div>
+          <h3 class="text-2xl font-bold">All done!</h3>
+          {#if !hideOmikujiMessage}
+          <p class="text-sm text-gray-600 text-center mb-4 mt-4 font-bold">
+            Please take your<br/> numbered omikuji.
+          </p>
+          {/if}
+          <button
+            on:click={resetFortuneSlip}
+            class="w-full py-2 px-4 mb-18 border text-sm rounded-2xl"
+          >
+            Try another omikuji
+          </button>
+        </div>
+
+        <!-- Nostr紹介 -->
+        <div class="bg-white rounded-lg p-4 w-52 flex-shrink-0 text-center">
+          <p class="text-sm font-bold text-gray-800 mb-2">
+            このアプリは<br/>Nostrで出来ています。
+          </p>
+          <p class="text-sm text-purple-700 font-semibold mb-3">
+            Nostrを<br/>始めてみましょう！
+          </p>
+          {#if nostrQrCodeDataUrl}
+            <img src={nostrQrCodeDataUrl} alt="Nostr紹介QRコード" class="w-32 h-32 mx-auto rounded" />
           {/if}
         </div>
-        <h3 class="text-2xl font-bold">All done!</h3>
-        {#if !hideOmikujiMessage}
-        <p class="text-sm text-gray-600 text-center mb-4 mt-4 font-bold">
-          Please take your<br/> numbered omikuji.
-        </p>
-        {/if}
-        <!-- もう一度ボタン -->
-        <button
-          on:click={resetFortuneSlip}
-          class="w-full py-2 px-4 mb-18 border text-sm rounded-2xl"
-        >
-          Try another omikuji
-        </button>
       </div>
     {/if}
     </div>
