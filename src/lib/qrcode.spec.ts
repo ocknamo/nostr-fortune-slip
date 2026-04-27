@@ -52,15 +52,15 @@ class MockImage {
 
 // Setup global mocks for DOM APIs
 global.document = {
-  createElement: (tag: string): HTMLElement => {
+  createElement: (tag: string) => {
     if (tag === 'canvas') {
-      return new MockCanvas() as unknown as HTMLCanvasElement;
+      return new MockCanvas() as any;
     }
-    return {} as unknown as HTMLElement;
+    return {} as any;
   },
-} as unknown as Document;
+} as any;
 
-global.Image = MockImage as unknown as typeof Image;
+global.Image = MockImage as any;
 
 describe('generateLightningQRCode', () => {
   beforeEach(() => {
