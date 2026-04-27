@@ -14,9 +14,9 @@ import {
   validateRelayText,
   validateNpub,
   validateForm as _validateForm,
-} from './settings';
-import { isNip07Available, nip07GetPublicKey, syncRelaysFromNip65 } from '$lib/nostr/nip07';
-import { fetchMetadataFromRelays } from '$lib/nostr/metadata';
+} from './settings.js';
+import { isNip07Available, nip07GetPublicKey, syncRelaysFromNip65 } from '$lib/nostr/nip07.js';
+import { fetchMetadataFromRelays } from '$lib/nostr/metadata.js';
 import type { MetadataContent } from '$lib/nostr';
 import { nip19 } from 'nostr-tools';
 

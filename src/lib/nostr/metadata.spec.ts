@@ -1,9 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { decodeNpub, fetchMetadataFromRelays, validateNpub } from './metadata';
+import { decodeNpub, fetchMetadataFromRelays, validateNpub } from './metadata.js';
 
 // Mock relay module
 const mockFetchEvent = vi.fn();
-vi.mock('./relay', () => ({
+vi.mock('./relay.js', () => ({
   fetchEventFromRelays: (...args: unknown[]) => mockFetchEvent(...args),
 }));
 

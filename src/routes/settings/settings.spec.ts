@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { OPENSATS_ADDRESS, validateForm } from './settings';
+import { OPENSATS_ADDRESS, validateForm } from './settings.js';
 
 const validState = {
   lightningAddress: 'user@domain.com',

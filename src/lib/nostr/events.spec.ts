@@ -6,8 +6,8 @@ import {
   createMetadataEvent,
   createTextEventNip07,
   createZapRequestNip07,
-} from './events';
-import type { NostrEvent } from './types';
+} from './events.js';
+import type { NostrEvent } from './types.js';
 import { nip19, nip57, finalizeEvent } from 'nostr-tools';
 
 // Mock nostr-tools

@@ -5,11 +5,11 @@ import {
   nip07SignEvent,
   fetchRelayListFromRelays,
   syncRelaysFromNip65,
-} from './nip07';
+} from './nip07.js';
 
 // Mock relay module
 const mockFetchEvent = vi.fn();
-vi.mock('./relay', () => ({
+vi.mock('./relay.js', () => ({
   fetchEventFromRelays: (...args: unknown[]) => mockFetchEvent(...args),
   serializeRelays: (r: string[]) => r.join('\n'),
 }));

@@ -1,8 +1,8 @@
 import { SimplePool } from 'nostr-tools';
 import type { Event, Filter } from 'nostr-tools';
-import type { NostrEvent, ZapReceiptSubscription } from './types';
-import { getRelays } from './relay';
-import { verifyCoinosPayment } from '../coinos/index';
+import type { NostrEvent, ZapReceiptSubscription } from './types.js';
+import { getRelays } from './relay.js';
+import { verifyCoinosPayment } from '../coinos/index.js';
 
 /**
  * Zapインボイスを直接取得（nostter風の実装）

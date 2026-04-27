@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { DEFAULT_RELAYS, parseRelays, serializeRelays, validateRelayText, getRelays } from './relay';
+import { DEFAULT_RELAYS, parseRelays, serializeRelays, validateRelayText, getRelays } from './relay.js';
 
 describe('DEFAULT_RELAYS', () => {
   it('デフォルトリレーが定義されている', () => {
