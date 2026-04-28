@@ -17,6 +17,7 @@ let fortuneMin = 1; // くじの最小値
 let fortuneMax = 20; // くじの最大値
 let fortuneTexts = ''; // くじの内容（カンマ区切り）
 let hideOmikujiMessage = false; // 紙のおみくじを促すメッセージと番号を非表示にする
+let testMode = false; // zapを介さずにくじを引けるテストモード
 
 // UI状態
 let showSuccessMessage = false;
@@ -59,6 +60,7 @@ onMount(() => {
     fortuneMax = storedFortuneMax ? parseInt(storedFortuneMax, 10) : 20;
     fortuneTexts = localStorage.getItem('fortuneTexts') || '';
     hideOmikujiMessage = localStorage.getItem('hideOmikujiMessage') === 'true';
+    testMode = localStorage.getItem('testMode') === 'true';
   }
 });
 
@@ -124,6 +126,7 @@ function handleSave() {
     localStorage.setItem('fortuneMax', fortuneMax.toString());
     localStorage.setItem('fortuneTexts', fortuneTexts);
     localStorage.setItem('hideOmikujiMessage', hideOmikujiMessage ? 'true' : 'false');
+    localStorage.setItem('testMode', testMode ? 'true' : 'false');
 
     showSuccessMessage = true;
     setTimeout(() => {
@@ -159,6 +162,7 @@ function handleClearData() {
     localStorage.removeItem('fortuneMax');
     localStorage.removeItem('fortuneTexts');
     localStorage.removeItem('hideOmikujiMessage');
+    localStorage.removeItem('testMode');
     // 旧データも削除（後方互換性のため）
     localStorage.removeItem('coinosId');
     localStorage.removeItem('coinosPassword');
@@ -173,6 +177,7 @@ function handleClearData() {
     fortuneMax = 20;
     fortuneTexts = '';
     hideOmikujiMessage = false;
+    testMode = false;
 
     showDeleteMessage = true;
     setTimeout(() => {
@@ -466,6 +471,24 @@ function handleClearData() {
                 <span class="block text-xs text-gray-500 mt-0.5">
                   チェックすると "Please take your numbered omikuji." と番号を隠し、
                   おみくじテキスト（大吉など）を大きく表示します。
+                </span>
+              </span>
+            </label>
+          </div>
+
+          <!-- テストモード -->
+          <div class="mt-4 p-3 bg-yellow-50 border border-yellow-300 rounded-md">
+            <label class="flex items-start gap-2 text-sm text-yellow-900 cursor-pointer">
+              <input
+                type="checkbox"
+                bind:checked={testMode}
+                class="mt-1 h-4 w-4 rounded border-yellow-500 text-yellow-600 focus:ring-yellow-500"
+              />
+              <span>
+                テストモード（zapせずにくじを引く）
+                <span class="block text-xs text-yellow-800 mt-0.5">
+                  本番では必ずオフにしてください。動作確認用にzapとQRコード表示をスキップして
+                  即座に番号を引きます。
                 </span>
               </span>
             </label>

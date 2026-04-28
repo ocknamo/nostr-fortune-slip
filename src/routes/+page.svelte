@@ -53,6 +53,7 @@ let fortuneTexts: string[] = []; // くじの内容配列
 let fortuneTextForNumber: string | null = null; // 生成された数字に対応するテキスト
 let hideOmikujiMessage = false; // 紙のおみくじを促すメッセージ・番号を隠す
 let nostrQrCodeDataUrl = ''; // Nostr 紹介サイトへの QR コード
+let testMode = false; // zapを介さずに直接くじを引くテストモード
 
 // 設定データを読み込み
 onMount(() => {
@@ -76,6 +77,7 @@ onMount(() => {
           .filter((t) => t)
       : [];
     hideOmikujiMessage = localStorage.getItem('hideOmikujiMessage') === 'true';
+    testMode = localStorage.getItem('testMode') === 'true';
 
     buildPlainQRCode('https://welcome.nostr-jp.org/')
       .then((url) => {
@@ -198,6 +200,14 @@ function resetFortuneSlip() {
 async function generateQRCode() {
   clearMessages();
   resetFortuneSlip();
+
+  // テストモード: zapとQR表示をスキップして即座に当選フローへ
+  if (testMode) {
+    randomNumber = generateLuckyNumber(fortuneMin, fortuneMax);
+    fortuneTextForNumber = getFortuneText(randomNumber, fortuneTexts);
+    isAnimationPlaying = true;
+    return;
+  }
 
   // 設定が不完全な場合は設定画面に誘導
   if (!lightningAddress || !nostrPrivateKey) {
