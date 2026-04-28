@@ -17,7 +17,7 @@ import {
   generateRandomBase64,
   getFortuneText,
 } from '$lib/nostr';
-import { generateLightningQRCode } from '$lib/qrcode';
+import { generateLightningQRCode, generateQRCode as buildPlainQRCode } from '$lib/qrcode';
 import { nip57 } from 'nostr-tools';
 import { startCoinosPolling, type CoinosPollingSubscription } from '$lib/coinos';
 
@@ -52,6 +52,7 @@ let fortuneMax = 20; // くじの最大値
 let fortuneTexts: string[] = []; // くじの内容配列
 let fortuneTextForNumber: string | null = null; // 生成された数字に対応するテキスト
 let hideOmikujiMessage = false; // 紙のおみくじを促すメッセージ・番号を隠す
+let nostrQrCodeDataUrl = ''; // Nostr 紹介サイトへの QR コード
 
 // 設定データを読み込み
 onMount(() => {
@@ -75,6 +76,14 @@ onMount(() => {
           .filter((t) => t)
       : [];
     hideOmikujiMessage = localStorage.getItem('hideOmikujiMessage') === 'true';
+
+    buildPlainQRCode('https://welcome.nostr-jp.org/')
+      .then((url) => {
+        nostrQrCodeDataUrl = url;
+      })
+      .catch((err) => {
+        console.warn('[Fortune Slip] Failed to generate Nostr intro QR:', err);
+      });
   }
 });
 
@@ -413,6 +422,21 @@ function handleAnimationComplete() {
             Please take your<br/> numbered omikuji.
           </p>
         {/if}
+        <!-- Nostr 紹介 QR コード -->
+        {#if nostrQrCodeDataUrl}
+          <div class="mt-4 text-center">
+            <p class="text-xs text-gray-600 mb-2">Nostr ってなに？</p>
+            <img
+              src={nostrQrCodeDataUrl}
+              alt="Nostr 紹介 (welcome.nostr-jp.org)"
+              class="w-32 h-32 mx-auto rounded"
+            />
+            <p class="text-[10px] text-gray-500 mt-1 break-all">
+              welcome.nostr-jp.org
+            </p>
+          </div>
+        {/if}
+
         <!-- もう一度ボタン -->
         <button
           on:click={resetFortuneSlip}
