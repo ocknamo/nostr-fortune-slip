@@ -18,7 +18,7 @@ import {
   generateRandomBase64,
   getFortuneText,
 } from '$lib/nostr';
-import { generateLightningQRCode, generateQRCode as buildPlainQRCode } from '$lib/qrcode';
+import { generateLightningQRCode, generateQRCode } from '$lib/qrcode';
 import { nip57 } from 'nostr-tools';
 import { startCoinosPolling, type CoinosPollingSubscription } from '$lib/coinos';
 
@@ -90,7 +90,7 @@ onMount(() => {
     const storedAnimationStyle = localStorage.getItem('animationStyle');
     animationStyle = storedAnimationStyle === 'flashy' ? 'flashy' : 'normal';
 
-    buildPlainQRCode('https://welcome.nostr-jp.org/')
+    generateQRCode('https://welcome.nostr-jp.org/')
       .then((url) => {
         nostrQrCodeDataUrl = url;
       })
@@ -209,7 +209,7 @@ function resetFortuneSlip() {
   clearMessages();
 }
 
-async function generateQRCode() {
+async function startFortuneDraw() {
   clearMessages();
   resetFortuneSlip();
 
@@ -425,7 +425,7 @@ function handleLightningComplete() {
         <div class="max-w-md mx-auto">
           <!-- QRコード生成ボタン -->
           <button
-            on:click={generateQRCode}
+            on:click={startFortuneDraw}
             disabled={isLoading || isWaitingForZap}
             class="h-16 w-60 bg-red-900 disabled:bg-amber-600 disabled:cursor-not-allowed text-white text-xl font-medium py-4 px-4 outline-1 pl-6 pr-6 rounded-4xl"
           >
