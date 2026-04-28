@@ -191,11 +191,22 @@ function startLightningAnimation(canvas: HTMLCanvasElement): number {
   return STRIKE_MS + GAP + STRIKE_MS;
 }
 
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+}
+
 function fireConfetti() {
+  if (prefersReducedMotion()) return;
+
   const colors = ['#facc15', '#fbbf24', '#f59e0b', '#ffffff', '#a855f7', '#38bdf8'];
   const s = window.innerWidth < 768 ? 0.5 : 1;
   const p = (n: number) => Math.round(n * s);
 
+  // 全 burst に disableForReducedMotion を効かせる: 上の早期リターンで漏れた場合の保険
   confetti({
     particleCount: p(350),
     spread: 160,
@@ -215,6 +226,7 @@ function fireConfetti() {
       angle: 55,
       origin: { x: 0.0, y: 0.1 },
       colors,
+      disableForReducedMotion: true,
     });
     confetti({
       particleCount: p(200),
@@ -224,6 +236,7 @@ function fireConfetti() {
       angle: 125,
       origin: { x: 1.0, y: 0.1 },
       colors,
+      disableForReducedMotion: true,
     });
   }, 120);
 
@@ -235,6 +248,7 @@ function fireConfetti() {
       gravity: 0.8,
       origin: { x: 0.35, y: 0.05 },
       colors,
+      disableForReducedMotion: true,
     });
     confetti({
       particleCount: p(150),
@@ -243,6 +257,7 @@ function fireConfetti() {
       gravity: 0.8,
       origin: { x: 0.65, y: 0.05 },
       colors,
+      disableForReducedMotion: true,
     });
   }, 300);
 
@@ -255,6 +270,7 @@ function fireConfetti() {
       angle: 45,
       origin: { x: 0.0, y: 0.0 },
       colors,
+      disableForReducedMotion: true,
     });
     confetti({
       particleCount: p(120),
@@ -264,6 +280,7 @@ function fireConfetti() {
       angle: 135,
       origin: { x: 1.0, y: 0.0 },
       colors,
+      disableForReducedMotion: true,
     });
   }, 500);
 
@@ -275,12 +292,25 @@ function fireConfetti() {
       gravity: 0.65,
       origin: { x: 0.5, y: 0.05 },
       colors,
+      disableForReducedMotion: true,
     });
   }, 700);
 }
 
 onMount(() => {
   if (!canvasEl) return;
+
+  // 不特定多数を対象とするキオスクで全画面の白フラッシュ + 稲妻を出すため、
+  // prefers-reduced-motion の利用者には稲妻と紙吹雪をスキップして
+  // テキスト表示のみに切り替える（光感受性てんかん対策の一段目）
+  if (prefersReducedMotion()) {
+    phase = 'reveal';
+    const doneTimer = setTimeout(() => {
+      phase = 'done';
+      onComplete?.();
+    }, 1500);
+    return () => clearTimeout(doneTimer);
+  }
 
   canvasEl.width = window.innerWidth;
   canvasEl.height = window.innerHeight;
