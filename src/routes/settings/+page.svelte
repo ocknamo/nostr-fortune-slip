@@ -16,6 +16,7 @@ let pinCode = ''; // PIN設定用
 let fortuneMin = 1; // くじの最小値
 let fortuneMax = 20; // くじの最大値
 let fortuneTexts = ''; // くじの内容（カンマ区切り）
+let hideOmikujiMessage = false; // 紙のおみくじを促すメッセージと番号を非表示にする
 
 // UI状態
 let showSuccessMessage = false;
@@ -57,6 +58,7 @@ onMount(() => {
     const storedFortuneMax = localStorage.getItem('fortuneMax');
     fortuneMax = storedFortuneMax ? parseInt(storedFortuneMax, 10) : 20;
     fortuneTexts = localStorage.getItem('fortuneTexts') || '';
+    hideOmikujiMessage = localStorage.getItem('hideOmikujiMessage') === 'true';
   }
 });
 
@@ -121,6 +123,7 @@ function handleSave() {
     localStorage.setItem('fortuneMin', fortuneMin.toString());
     localStorage.setItem('fortuneMax', fortuneMax.toString());
     localStorage.setItem('fortuneTexts', fortuneTexts);
+    localStorage.setItem('hideOmikujiMessage', hideOmikujiMessage ? 'true' : 'false');
 
     showSuccessMessage = true;
     setTimeout(() => {
@@ -155,6 +158,7 @@ function handleClearData() {
     localStorage.removeItem('fortuneMin');
     localStorage.removeItem('fortuneMax');
     localStorage.removeItem('fortuneTexts');
+    localStorage.removeItem('hideOmikujiMessage');
     // 旧データも削除（後方互換性のため）
     localStorage.removeItem('coinosId');
     localStorage.removeItem('coinosPassword');
@@ -168,6 +172,7 @@ function handleClearData() {
     fortuneMin = 1;
     fortuneMax = 20;
     fortuneTexts = '';
+    hideOmikujiMessage = false;
 
     showDeleteMessage = true;
     setTimeout(() => {
@@ -441,11 +446,29 @@ function handleClearData() {
               placeholder="大吉,中吉,小吉,吉,末吉,凶,大凶"
               rows="3"
               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+            ></textarea>
             <p class="mt-1 text-sm text-gray-500">
               カンマ区切りでおみくじの内容を入力します。空欄の場合は数字のみ表示されます。<br/>
               数字が配列の長さを超える場合は、循環して表示されます。
             </p>
+          </div>
+
+          <!-- 紙のおみくじを促すメッセージと番号を非表示にする -->
+          <div class="mt-4">
+            <label class="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                bind:checked={hideOmikujiMessage}
+                class="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span>
+                紙のおみくじを促すメッセージと番号を非表示にする
+                <span class="block text-xs text-gray-500 mt-0.5">
+                  チェックすると "Please take your numbered omikuji." と番号を隠し、
+                  おみくじテキスト（大吉など）を大きく表示します。
+                </span>
+              </span>
+            </label>
           </div>
         </div>
 

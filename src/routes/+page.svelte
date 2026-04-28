@@ -51,6 +51,7 @@ let fortuneMin = 1; // くじの最小値
 let fortuneMax = 20; // くじの最大値
 let fortuneTexts: string[] = []; // くじの内容配列
 let fortuneTextForNumber: string | null = null; // 生成された数字に対応するテキスト
+let hideOmikujiMessage = false; // 紙のおみくじを促すメッセージ・番号を隠す
 
 // 設定データを読み込み
 onMount(() => {
@@ -73,6 +74,7 @@ onMount(() => {
           .map((t) => t.trim())
           .filter((t) => t)
       : [];
+    hideOmikujiMessage = localStorage.getItem('hideOmikujiMessage') === 'true';
   }
 });
 
@@ -388,25 +390,33 @@ function handleAnimationComplete() {
 
       <!-- Zap検知後のランダム数字表示 -->
       {#if zapDetected && !isAnimationPlaying}
-      <div class="mb-6 bg-white pl-4 pr-4 w-50">
+      <div class="mb-6 bg-white pl-4 pr-4 {hideOmikujiMessage ? 'w-80' : 'w-50'}">
         <div class="flex flex-col justify-center mb-4 border-b pb-4">
-          <div class="h-36 flex items-center justify-center">
-            <span class="font-bold text-rose-500 text-7xl mb-4">{randomNumber}</span>
-          </div>
+          {#if !hideOmikujiMessage}
+            <div class="h-36 flex items-center justify-center">
+              <span class="font-bold text-rose-500 text-7xl mb-4">{randomNumber}</span>
+            </div>
+          {/if}
           {#if fortuneTextForNumber}
-            <div class="text-center">
-              <p class="text-2xl font-semibold text-gray-800">{fortuneTextForNumber}</p>
+            <div class="text-center {hideOmikujiMessage ? 'py-8' : ''}">
+              <p class={hideOmikujiMessage
+                ? 'text-6xl font-extrabold text-rose-600 tracking-widest'
+                : 'text-2xl font-semibold text-gray-800'}>
+                {fortuneTextForNumber}
+              </p>
             </div>
           {/if}
         </div>
         <h3 class="text-2xl font-bold">All done!</h3>
-        <p class="text-sm text-gray-600 text-center mb-4 mt-4 font-bold">
-          Please take your<br/> numbered omikuji.
-        </p>
+        {#if !hideOmikujiMessage}
+          <p class="text-sm text-gray-600 text-center mb-4 mt-4 font-bold">
+            Please take your<br/> numbered omikuji.
+          </p>
+        {/if}
         <!-- もう一度ボタン -->
         <button
           on:click={resetFortuneSlip}
-          class="w-full py-2 px-4 mb-18 border text-sm rounded-2xl"
+          class="w-full py-2 px-4 mb-18 mt-4 border text-sm rounded-2xl"
         >
           Try another omikuji
         </button>
