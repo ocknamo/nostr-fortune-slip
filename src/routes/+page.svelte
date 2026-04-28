@@ -413,7 +413,7 @@ function handleLightningComplete() {
 
         
       </div>
-      {:else if !zapDetected}
+      {:else if !zapDetected && !isLightningPlaying}
       <!-- Fixed button container at the bottom -->
       <div class="fixed bottom-0 left-0 right-0 px-4 pb-18 pt-2 z-10">
         <div class="max-w-md mx-auto">
