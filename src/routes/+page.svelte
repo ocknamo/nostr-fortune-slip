@@ -281,11 +281,12 @@ function handleAnimationComplete() {
   isAnimationPlaying = false;
   zapDetected = true;
 
-  // 20秒後に自動リセット
+  // 5分後に自動リセット（次の利用者が来るまでに結果を片付けつつ、
+  // 結果を読む時間を十分に確保する）
   autoResetTimerId = window.setTimeout(() => {
-    console.log('[Fortune Slip] Auto-resetting after 20 seconds');
+    console.log('[Fortune Slip] Auto-resetting after 5 minutes');
     resetFortuneSlip();
-  }, 20000);
+  }, 300000);
 }
 </script>
 
