@@ -1,47 +1,16 @@
 // 型定義をエクスポート
-export type { NostrEvent, MetadataContent, ZapReceiptSubscription } from './types';
+export type { NostrEvent, MetadataContent, ZapReceiptSubscription } from './types.js';
 
 // イベント作成関連をエクスポート
-export {
-  decodeNsec,
-  createTextEvent,
-  createZapRequest,
-  createTextEventNip07,
-  createZapRequestNip07,
-  createMetadataEvent,
-} from './events';
-
-// NIP-07関連をエクスポート
-export {
-  isNip07Available,
-  nip07GetPublicKey,
-  nip07SignEvent,
-  fetchRelayListFromRelays,
-  syncRelaysFromNip65,
-} from './nip07';
+export { decodeNsec, createTextEvent, createZapRequest, createMetadataEvent } from './events.js';
 
 // Zap関連をエクスポート
-export {
-  getZapInvoiceFromEndpoint,
-  validateZapReceipt,
-  subscribeToZapReceipts,
-  type ZapSubscriptionOptions,
-} from './zap';
+export { getZapInvoiceFromEndpoint, validateZapReceipt, subscribeToZapReceipts } from './zap.js';
 
 // Fortune機能をエクスポート
-export { generateLuckyNumber, getFortuneText, shouldShowConfetti } from './fortune';
+export { generateLuckyNumber, getFortuneText } from './fortune.js';
 
 // ランダム値生成をエクスポート
-export { generateRandomBase64 } from './random';
+export { generateRandomBase64 } from './random.js';
 
-export {
-  DEFAULT_RELAYS,
-  getRelays,
-  parseRelays,
-  serializeRelays,
-  validateRelayText,
-  fetchEventFromRelays,
-} from './relay';
-
-// メタデータ取得関連をエクスポート
-export { decodeNpub, fetchMetadataFromRelays, validateNpub } from './metadata';
+export { RELAYS } from './relay.js';
