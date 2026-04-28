@@ -207,22 +207,75 @@ function fireConfetti() {
   });
 
   setTimeout(() => {
-    confetti({ particleCount: p(200), spread: 100, startVelocity: 55, gravity: 0.75, angle: 55, origin: { x: 0.0, y: 0.1 }, colors });
-    confetti({ particleCount: p(200), spread: 100, startVelocity: 55, gravity: 0.75, angle: 125, origin: { x: 1.0, y: 0.1 }, colors });
+    confetti({
+      particleCount: p(200),
+      spread: 100,
+      startVelocity: 55,
+      gravity: 0.75,
+      angle: 55,
+      origin: { x: 0.0, y: 0.1 },
+      colors,
+    });
+    confetti({
+      particleCount: p(200),
+      spread: 100,
+      startVelocity: 55,
+      gravity: 0.75,
+      angle: 125,
+      origin: { x: 1.0, y: 0.1 },
+      colors,
+    });
   }, 120);
 
   setTimeout(() => {
-    confetti({ particleCount: p(150), spread: 120, startVelocity: 50, gravity: 0.8, origin: { x: 0.35, y: 0.05 }, colors });
-    confetti({ particleCount: p(150), spread: 120, startVelocity: 50, gravity: 0.8, origin: { x: 0.65, y: 0.05 }, colors });
+    confetti({
+      particleCount: p(150),
+      spread: 120,
+      startVelocity: 50,
+      gravity: 0.8,
+      origin: { x: 0.35, y: 0.05 },
+      colors,
+    });
+    confetti({
+      particleCount: p(150),
+      spread: 120,
+      startVelocity: 50,
+      gravity: 0.8,
+      origin: { x: 0.65, y: 0.05 },
+      colors,
+    });
   }, 300);
 
   setTimeout(() => {
-    confetti({ particleCount: p(120), spread: 80, startVelocity: 50, gravity: 0.85, angle: 45, origin: { x: 0.0, y: 0.0 }, colors });
-    confetti({ particleCount: p(120), spread: 80, startVelocity: 50, gravity: 0.85, angle: 135, origin: { x: 1.0, y: 0.0 }, colors });
+    confetti({
+      particleCount: p(120),
+      spread: 80,
+      startVelocity: 50,
+      gravity: 0.85,
+      angle: 45,
+      origin: { x: 0.0, y: 0.0 },
+      colors,
+    });
+    confetti({
+      particleCount: p(120),
+      spread: 80,
+      startVelocity: 50,
+      gravity: 0.85,
+      angle: 135,
+      origin: { x: 1.0, y: 0.0 },
+      colors,
+    });
   }, 500);
 
   setTimeout(() => {
-    confetti({ particleCount: p(250), spread: 170, startVelocity: 60, gravity: 0.65, origin: { x: 0.5, y: 0.05 }, colors });
+    confetti({
+      particleCount: p(250),
+      spread: 170,
+      startVelocity: 60,
+      gravity: 0.65,
+      origin: { x: 0.5, y: 0.05 },
+      colors,
+    });
   }, 700);
 }
 
