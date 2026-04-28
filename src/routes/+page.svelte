@@ -24,6 +24,9 @@ import { startCoinosPolling, type CoinosPollingSubscription } from '$lib/coinos'
 
 import backgroundImage from '$lib/assets/background.jpg';
 
+const NOSTR_INTRO_URL = 'https://welcome.nostr-jp.org/';
+const NOSTR_INTRO_HOST = new URL(NOSTR_INTRO_URL).host;
+
 // UI状態
 let isLoading = false;
 let qrCodeDataUrl = '';
@@ -87,7 +90,7 @@ onMount(() => {
     const storedAnimationStyle = localStorage.getItem('animationStyle');
     animationStyle = storedAnimationStyle === 'flashy' ? 'flashy' : 'normal';
 
-    generateQRCode('https://welcome.nostr-jp.org/')
+    generateQRCode(NOSTR_INTRO_URL)
       .then((url) => {
         nostrQrCodeDataUrl = url;
       })
@@ -446,10 +449,10 @@ function handleLightningComplete() {
       {/if}
 
       <!-- 派手モード時の稲妻演出 -->
-      {#if isLightningPlaying && LightningReveal}
+      {#if isLightningPlaying && LightningReveal && randomNumber !== null}
         {@const RevealComponent = LightningReveal}
         <RevealComponent
-          text={fortuneTextForNumber ?? (randomNumber !== null ? String(randomNumber) : '')}
+          text={fortuneTextForNumber ?? String(randomNumber)}
           onComplete={handleLightningComplete}
         />
       {/if}
@@ -485,11 +488,11 @@ function handleLightningComplete() {
             <p class="text-xs text-gray-600 mb-2">Nostr ってなに？</p>
             <img
               src={nostrQrCodeDataUrl}
-              alt="Nostr 紹介 (welcome.nostr-jp.org)"
+              alt="Nostr 紹介 ({NOSTR_INTRO_HOST})"
               class="w-32 h-32 mx-auto rounded"
             />
             <p class="text-[10px] text-gray-500 mt-1 break-all">
-              welcome.nostr-jp.org
+              {NOSTR_INTRO_HOST}
             </p>
           </div>
         {/if}
