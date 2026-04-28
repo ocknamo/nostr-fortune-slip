@@ -164,9 +164,11 @@ export function subscribeToZapReceipts(
   console.log(`[Zap Monitor] Coinos verification enabled:`, !!coinosApiToken);
 
   // フィルターを正しいFilter型で作成
+  // since は 300 秒前まで遡る: 一部リレーで Zap Receipt の配信が
+  // 数十秒〜数分遅れることがあるため、購読開始直前のレシート取りこぼしを防ぐ
   const filter: Filter = {
     kinds: [9735],
-    since: Math.floor(Date.now() / 1000) - 60,
+    since: Math.floor(Date.now() / 1000) - 300,
     '#e': [targetEventId], // Filter型のindex signatureを使用
   };
 
