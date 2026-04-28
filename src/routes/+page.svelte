@@ -36,9 +36,6 @@ let isAnimationPlaying = false;
 // Zap検知用の状態
 let zapSubscription: ZapReceiptSubscription | null = null;
 let coinosPollingSubscription: CoinosPollingSubscription | null = null;
-let currentZapRequest: NostrEvent | null = null;
-let currentTargetEventId: string | null = null;
-let paymentId: string | null = null;
 
 // 自動リセット用タイマー
 let autoResetTimerId: number | null = null;
@@ -131,9 +128,6 @@ function stopZapMonitoring() {
     coinosPollingSubscription = null;
   }
   isWaitingForZap = false;
-  currentZapRequest = null;
-  currentTargetEventId = null;
-  paymentId = null;
 }
 
 async function onZapDetected(zapReceipt: NostrEvent) {
@@ -272,9 +266,6 @@ async function startFortuneDraw() {
     qrCodeDataUrl = await generateLightningQRCode(invoice.pr);
 
     // 9. Zap検知を開始
-    currentZapRequest = zapRequest;
-    currentTargetEventId = textEvent.id;
-
     zapSubscription = subscribeToZapReceipts(
       textEvent.id,
       zapRequest,
