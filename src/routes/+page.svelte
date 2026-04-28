@@ -4,7 +4,7 @@ import { base } from '$app/paths';
 import { onMount, onDestroy } from 'svelte';
 import settingsIcon from '$lib/assets/settings.svg';
 import OmikujiAnimation from '$lib/components/OmikujiAnimation.svelte';
-import LightningReveal from '$lib/components/LightningReveal.svelte';
+import type { Component } from 'svelte';
 import {
   decodeNsec,
   createTextEvent,
@@ -57,6 +57,12 @@ let nostrQrCodeDataUrl = ''; // Nostr 紹介サイトへの QR コード
 let testMode = false; // zapを介さずに直接くじを引くテストモード
 let animationStyle: 'normal' | 'flashy' = 'normal'; // 演出スタイル
 let isLightningPlaying = false; // 派手モード時の稲妻演出再生中フラグ
+
+// 派手モード専用の重い演出コンポーネントは初回必要時に動的に取得する。
+// canvas-confetti を含むためバンドルが膨らみがちで、ノーマルモードの
+// 利用者には積み込みたくない。
+type LightningRevealProps = { text: string; showConfetti?: boolean; onComplete?: () => void };
+let LightningReveal: Component<LightningRevealProps> | null = null;
 
 // 設定データを読み込み
 onMount(() => {
@@ -312,12 +318,23 @@ function startAutoReset() {
   }, 300000);
 }
 
-function handleAnimationComplete() {
+async function handleAnimationComplete() {
   // 通常おみくじアニメーション完了後の遷移先を演出スタイルで分岐
   isAnimationPlaying = false;
 
   if (animationStyle === 'flashy') {
     // 派手モード: 続けて稲妻演出を再生
+    if (!LightningReveal) {
+      try {
+        const module = await import('$lib/components/LightningReveal.svelte');
+        LightningReveal = module.default as Component<LightningRevealProps>;
+      } catch (err) {
+        console.warn('[Fortune Slip] Failed to load LightningReveal, falling back to normal flow:', err);
+        zapDetected = true;
+        startAutoReset();
+        return;
+      }
+    }
     isLightningPlaying = true;
     return;
   }
@@ -430,8 +447,9 @@ function handleLightningComplete() {
       {/if}
 
       <!-- 派手モード時の稲妻演出 -->
-      {#if isLightningPlaying}
-        <LightningReveal
+      {#if isLightningPlaying && LightningReveal}
+        {@const RevealComponent = LightningReveal}
+        <RevealComponent
           text={fortuneTextForNumber ?? (randomNumber !== null ? String(randomNumber) : '')}
           onComplete={handleLightningComplete}
         />
