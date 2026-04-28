@@ -4,8 +4,8 @@ import {
   validateZapReceipt,
   validateZapReceiptWithCoinos,
   subscribeToZapReceipts,
-} from './zap.js';
-import type { NostrEvent } from './types.js';
+} from './zap';
+import type { NostrEvent } from './types';
 import { SimplePool } from 'nostr-tools';
 
 // Mock fetch globally
@@ -18,11 +18,11 @@ vi.mock('nostr-tools', () => ({
 }));
 
 // Mock coinos module
-vi.mock('../coinos/index.js', () => ({
+vi.mock('../coinos/index', () => ({
   verifyCoinosPayment: vi.fn(),
 }));
 
-import { verifyCoinosPayment } from '../coinos/index.js';
+import { verifyCoinosPayment } from '../coinos/index';
 const mockVerifyCoinosPayment = vi.mocked(verifyCoinosPayment);
 
 describe('getZapInvoiceFromEndpoint', () => {
@@ -432,7 +432,7 @@ describe('subscribeToZapReceipts', () => {
     };
     mockPoolInstance.subscribeMany.mockReturnValue(mockSubscription);
 
-    const subscription = subscribeToZapReceipts(targetEventId, zapRequest, onZapReceived);
+    const subscription = subscribeToZapReceipts({ targetEventId, zapRequest, onZapReceived });
 
     expect(mockPoolInstance.subscribeMany).toHaveBeenCalledWith(
       expect.any(Array), // relays
@@ -473,7 +473,7 @@ describe('subscribeToZapReceipts', () => {
 
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    subscribeToZapReceipts(targetEventId, zapRequest, onZapReceived, 5000);
+    subscribeToZapReceipts({ targetEventId, zapRequest, onZapReceived, timeoutMs: 5000 });
 
     // Fast forward time to trigger timeout
     vi.advanceTimersByTime(5000);
@@ -505,7 +505,7 @@ describe('subscribeToZapReceipts', () => {
 
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    const subscription = subscribeToZapReceipts(targetEventId, zapRequest, onZapReceived);
+    const subscription = subscribeToZapReceipts({ targetEventId, zapRequest, onZapReceived });
 
     subscription.stop();
 
@@ -517,5 +517,52 @@ describe('subscribeToZapReceipts', () => {
     expect(mockPoolInstance.close).toHaveBeenCalled();
 
     consoleSpy.mockRestore();
+  });
+
+  it('recipientPubkey指定時は#pフィルターを使う（#eではなく）', () => {
+    const targetEventId = 'target-event-id';
+    const zapRequest: NostrEvent = {
+      id: 'zap-request-id',
+      pubkey: 'zap-pubkey',
+      created_at: Math.floor(Date.now() / 1000),
+      kind: 9734,
+      tags: [],
+      content: '',
+      sig: 'zap-sig',
+    };
+    const onZapReceived = vi.fn();
+    const recipientPubkey = 'recipient-pubkey-hex';
+
+    const mockSubscription = { close: vi.fn() };
+    mockPoolInstance.subscribeMany.mockReturnValue(mockSubscription);
+
+    subscribeToZapReceipts({ targetEventId, zapRequest, onZapReceived, recipientPubkey });
+
+    const filterArg = mockPoolInstance.subscribeMany.mock.calls[0][1];
+    expect(filterArg).toHaveProperty('#p', [recipientPubkey]);
+    expect(filterArg).not.toHaveProperty('#e');
+  });
+
+  it('recipientPubkey未指定時は従来の#eフィルターを使う', () => {
+    const targetEventId = 'target-event-id';
+    const zapRequest: NostrEvent = {
+      id: 'zap-request-id',
+      pubkey: 'zap-pubkey',
+      created_at: Math.floor(Date.now() / 1000),
+      kind: 9734,
+      tags: [],
+      content: '',
+      sig: 'zap-sig',
+    };
+    const onZapReceived = vi.fn();
+
+    const mockSubscription = { close: vi.fn() };
+    mockPoolInstance.subscribeMany.mockReturnValue(mockSubscription);
+
+    subscribeToZapReceipts({ targetEventId, zapRequest, onZapReceived });
+
+    const filterArg = mockPoolInstance.subscribeMany.mock.calls[0][1];
+    expect(filterArg).toHaveProperty('#e', [targetEventId]);
+    expect(filterArg).not.toHaveProperty('#p');
   });
 });

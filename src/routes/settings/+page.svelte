@@ -4,9 +4,24 @@ import { base } from '$app/paths';
 import { onMount } from 'svelte';
 
 import backgroundImage from '$lib/assets/background.jpg';
+import {
+  OPENSATS_NPUB,
+  OPENSATS_ADDRESS,
+  DEFAULT_CONFETTI_TEXTS,
+  DEFAULT_NO_CONFETTI_TEXTS,
+  DEFAULT_RELAYS,
+  serializeRelays,
+  validateRelayText,
+  validateNpub,
+  validateForm as _validateForm,
+} from './settings';
+import { isNip07Available, nip07GetPublicKey, syncRelaysFromNip65 } from '$lib/nostr/nip07';
+import { fetchMetadataFromRelays } from '$lib/nostr/metadata';
+import type { MetadataContent } from '$lib/nostr';
+import { nip19 } from 'nostr-tools';
 
 // フォームデータ
-let lightningAddress = '';
+let lightningAddress = OPENSATS_ADDRESS;
 let nostrPrivateKey = '';
 let coinosApiToken = '';
 let zapAmount = 100; // Zap金額（sats）
@@ -15,7 +30,42 @@ let showPin = false; // PIN表示切り替え
 let pinCode = ''; // PIN設定用
 let fortuneMin = 1; // くじの最小値
 let fortuneMax = 20; // くじの最大値
-let fortuneTexts = ''; // くじの内容（カンマ区切り）
+let fortuneTexts = ''; // くじの内容（カンマ区切り）- 後方互換用
+let confettiFortuneTexts = ''; // 紙吹雪を表示するおみくじ内容
+let noConfettiFortuneTexts = ''; // 紙吹雪を表示しないおみくじ内容
+let useDefaultFortuneTexts = false; // デフォルトおみくじ内容を使用するフラグ
+let savedConfettiTexts = ''; // デフォルト切り替え前の保持
+let savedNoConfettiTexts = ''; // デフォルト切り替え前の保持
+let savedFortuneTexts = ''; // useDefaultFortuneTexts切り替え前の内容を保持（後方互換）
+let hideOmikujiMessage = false; // 紙のおみくじを促すメッセージを非表示にするフラグ
+let testMode = false; // テストモード（zapなしでくじを引ける）
+let relaysText = serializeRelays(DEFAULT_RELAYS); // リレー設定（改行区切り）
+let zapRecipientNpub = OPENSATS_NPUB; // Zap先の公開鍵（npub形式、任意）
+
+function handleUseDefaultFortuneTextsChange() {
+  if (useDefaultFortuneTexts) {
+    savedConfettiTexts = confettiFortuneTexts;
+    savedNoConfettiTexts = noConfettiFortuneTexts;
+    confettiFortuneTexts = DEFAULT_CONFETTI_TEXTS;
+    noConfettiFortuneTexts = DEFAULT_NO_CONFETTI_TEXTS;
+  } else {
+    confettiFortuneTexts = savedConfettiTexts;
+    noConfettiFortuneTexts = savedNoConfettiTexts;
+  }
+  // 後方互換: fortuneTextsも更新
+  fortuneTexts = [confettiFortuneTexts, noConfettiFortuneTexts].filter(Boolean).join(',');
+}
+
+// NIP-07状態
+let nip07Available = false;
+let nip07LoggedIn = false;
+let nip07Pubkey = ''; // hex公開鍵
+let nip07Npub = ''; // npub表示用
+let nip07LoginError = '';
+let syncRelaysWithNip65 = false; // kind:10002同期チェックボックス
+let syncRelaysLoading = false; // 同期中フラグ
+let syncRelaysError = ''; // 同期エラー
+let nip07Profile: MetadataContent | null = null; // ログインユーザーのkind:0プロフィール
 
 // UI状態
 let showSuccessMessage = false;
@@ -44,7 +94,7 @@ onMount(() => {
     isAuthenticated = true;
 
     // 設定データを読み込み
-    lightningAddress = localStorage.getItem('lightningAddress') || '';
+    lightningAddress = localStorage.getItem('lightningAddress') || OPENSATS_ADDRESS;
     nostrPrivateKey = localStorage.getItem('nostrPrivateKey') || '';
     coinosApiToken = localStorage.getItem('coinosApiToken') || '';
     const storedZapAmount = localStorage.getItem('zapAmount');
@@ -56,57 +106,119 @@ onMount(() => {
     fortuneMin = storedFortuneMin ? parseInt(storedFortuneMin, 10) : 1;
     const storedFortuneMax = localStorage.getItem('fortuneMax');
     fortuneMax = storedFortuneMax ? parseInt(storedFortuneMax, 10) : 20;
-    fortuneTexts = localStorage.getItem('fortuneTexts') || '';
+    const storedFortuneTexts = localStorage.getItem('fortuneTexts') || '';
+    useDefaultFortuneTexts = localStorage.getItem('useDefaultFortuneTexts') === 'true';
+    hideOmikujiMessage = localStorage.getItem('hideOmikujiMessage') === 'true';
+    testMode = localStorage.getItem('testMode') === 'true';
+    const storedRelays = localStorage.getItem('relays');
+    relaysText = storedRelays || serializeRelays(DEFAULT_RELAYS);
+    zapRecipientNpub = localStorage.getItem('zapRecipientNpub') || OPENSATS_NPUB;
+
+    // NIP-07状態を復元
+    nip07Available = isNip07Available();
+    const storedNip07Pubkey = localStorage.getItem('nip07Pubkey');
+    if (storedNip07Pubkey) {
+      nip07LoggedIn = true;
+      nip07Pubkey = storedNip07Pubkey;
+      nip07Npub = nip19.npubEncode(storedNip07Pubkey);
+      // kind:0からプロフィールを取得（非同期・バックグラウンド）
+      fetchMetadataFromRelays(storedNip07Pubkey)
+        .then((profile) => {
+          nip07Profile = profile;
+        })
+        .catch(() => {});
+    }
+    syncRelaysWithNip65 = localStorage.getItem('syncRelaysWithNip65') === 'true';
+
+    // 紙吹雪テキスト読み込み
+    const storedConfetti = localStorage.getItem('confettiFortuneTexts');
+    const storedNoConfetti = localStorage.getItem('noConfettiFortuneTexts');
+    if (useDefaultFortuneTexts) {
+      savedConfettiTexts = storedConfetti || '';
+      savedNoConfettiTexts = storedNoConfetti || '';
+      confettiFortuneTexts = DEFAULT_CONFETTI_TEXTS;
+      noConfettiFortuneTexts = DEFAULT_NO_CONFETTI_TEXTS;
+      fortuneTexts = [DEFAULT_CONFETTI_TEXTS, DEFAULT_NO_CONFETTI_TEXTS].join(',');
+    } else {
+      confettiFortuneTexts = storedConfetti ?? DEFAULT_CONFETTI_TEXTS;
+      noConfettiFortuneTexts = storedNoConfetti ?? DEFAULT_NO_CONFETTI_TEXTS;
+      fortuneTexts = storedFortuneTexts || [confettiFortuneTexts, noConfettiFortuneTexts].filter(Boolean).join(',');
+    }
   }
 });
 
+// NIP-07ログイン
+async function handleNip07Login() {
+  nip07LoginError = '';
+  try {
+    const pubkey = await nip07GetPublicKey();
+    nip07Pubkey = pubkey;
+    nip07Npub = nip19.npubEncode(pubkey);
+    nip07LoggedIn = true;
+    localStorage.setItem('nip07Pubkey', pubkey);
+    // kind:0からプロフィールを取得
+    nip07Profile = await fetchMetadataFromRelays(pubkey);
+  } catch (error) {
+    nip07LoginError = error instanceof Error ? error.message : 'NIP-07ログインに失敗しました';
+  }
+}
+
+// NIP-07ログアウト
+function handleNip07Logout() {
+  nip07LoggedIn = false;
+  nip07Pubkey = '';
+  nip07Npub = '';
+  nip07LoginError = '';
+  nip07Profile = null;
+  syncRelaysWithNip65 = false;
+  syncRelaysError = '';
+  localStorage.removeItem('nip07Pubkey');
+  localStorage.removeItem('syncRelaysWithNip65');
+}
+
+// kind:10002同期チェックボックス切り替え
+async function handleSyncRelaysChange() {
+  if (syncRelaysWithNip65) {
+    // チェックON: kind:10002からリレーを取得
+    syncRelaysLoading = true;
+    syncRelaysError = '';
+    try {
+      const result = await syncRelaysFromNip65(nip07Pubkey);
+      if (result) {
+        relaysText = result;
+        localStorage.setItem('relays', result);
+      } else {
+        syncRelaysError = 'kind:10002のリレーリストが見つかりませんでした';
+        syncRelaysWithNip65 = false;
+      }
+    } catch (error) {
+      syncRelaysError = 'リレーリストの取得に失敗しました';
+      syncRelaysWithNip65 = false;
+    } finally {
+      syncRelaysLoading = false;
+    }
+    localStorage.setItem('syncRelaysWithNip65', syncRelaysWithNip65.toString());
+  } else {
+    // チェックOFF
+    localStorage.setItem('syncRelaysWithNip65', 'false');
+  }
+}
+
 // バリデーション関数
 function validateForm(): boolean {
-  errors = {};
-
-  // ライトニングアドレスのバリデーション
-  if (!lightningAddress.trim()) {
-    errors.lightningAddress = 'ライトニングアドレスは必須です';
-  } else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(lightningAddress)) {
-    errors.lightningAddress = '正しいメールアドレス形式で入力してください（例：user@domain.com）';
+  const hasNpub = !!zapRecipientNpub.trim();
+  errors = _validateForm(
+    { lightningAddress, nostrPrivateKey, pinCode, zapAmount, fortuneMin, fortuneMax },
+    { skipLightningAddress: testMode || hasNpub, skipNostrKey: testMode || nip07LoggedIn },
+  );
+  const relayError = validateRelayText(relaysText);
+  if (relayError) {
+    errors.relays = relayError;
   }
-
-  // Nostr秘密鍵のバリデーション
-  if (!nostrPrivateKey.trim()) {
-    errors.nostrPrivateKey = 'Nostr秘密鍵は必須です';
-  } else if (!nostrPrivateKey.startsWith('nsec1')) {
-    errors.nostrPrivateKey = 'nsec1で始まる有効な秘密鍵を入力してください';
+  const npubError = validateNpub(zapRecipientNpub);
+  if (npubError) {
+    errors.zapRecipientNpub = npubError;
   }
-
-  // PIN検証
-  if (!pinCode.trim()) {
-    errors.pinCode = 'PINは必須です';
-  } else if (!/^\d{4}$/.test(pinCode)) {
-    errors.pinCode = '4桁の数字を入力してください';
-  }
-
-  // Zap金額のバリデーション
-  if (!zapAmount || zapAmount < 1 || zapAmount > 1000) {
-    errors.zapAmount = 'Zap金額は1〜1000 satsの範囲で入力してください';
-  } else if (!Number.isInteger(zapAmount)) {
-    errors.zapAmount = 'Zap金額は整数で入力してください';
-  }
-
-  // くじ範囲のバリデーション
-  if (!fortuneMin || !Number.isInteger(fortuneMin) || fortuneMin < 1) {
-    errors.fortuneMin = '最小値は1以上の整数を入力してください';
-  }
-  if (!fortuneMax || !Number.isInteger(fortuneMax) || fortuneMax < 1) {
-    errors.fortuneMax = '最大値は1以上の整数を入力してください';
-  }
-  if (fortuneMin && fortuneMax && fortuneMin >= fortuneMax) {
-    errors.fortuneMin = '最小値は最大値より小さくしてください';
-    errors.fortuneMax = '最大値は最小値より大きくしてください';
-  }
-
-  // Coinos API Token（オプショナル）はバリデーションなし
-  // fortuneTexts（オプショナル）もバリデーションなし
-
   return Object.keys(errors).length === 0;
 }
 
@@ -120,7 +232,21 @@ function handleSave() {
     localStorage.setItem('settingsPin', pinCode);
     localStorage.setItem('fortuneMin', fortuneMin.toString());
     localStorage.setItem('fortuneMax', fortuneMax.toString());
-    localStorage.setItem('fortuneTexts', fortuneTexts);
+    localStorage.setItem('useDefaultFortuneTexts', useDefaultFortuneTexts.toString());
+    const saveConfetti = useDefaultFortuneTexts ? savedConfettiTexts : confettiFortuneTexts;
+    const saveNoConfetti = useDefaultFortuneTexts ? savedNoConfettiTexts : noConfettiFortuneTexts;
+    localStorage.setItem('confettiFortuneTexts', saveConfetti);
+    localStorage.setItem('noConfettiFortuneTexts', saveNoConfetti);
+    // 後方互換: fortuneTextsも保存
+    localStorage.setItem('fortuneTexts', [saveConfetti, saveNoConfetti].filter(Boolean).join(','));
+    localStorage.setItem('relays', relaysText);
+    localStorage.setItem('syncRelaysWithNip65', syncRelaysWithNip65.toString());
+    localStorage.setItem('zapRecipientNpub', zapRecipientNpub.trim());
+    if (nip07LoggedIn) {
+      localStorage.setItem('nip07Pubkey', nip07Pubkey);
+    }
+    localStorage.setItem('hideOmikujiMessage', hideOmikujiMessage.toString());
+    localStorage.setItem('testMode', testMode.toString());
 
     showSuccessMessage = true;
     setTimeout(() => {
@@ -155,19 +281,39 @@ function handleClearData() {
     localStorage.removeItem('fortuneMin');
     localStorage.removeItem('fortuneMax');
     localStorage.removeItem('fortuneTexts');
+    localStorage.removeItem('confettiFortuneTexts');
+    localStorage.removeItem('noConfettiFortuneTexts');
+    localStorage.removeItem('useDefaultFortuneTexts');
+    localStorage.removeItem('hideOmikujiMessage');
+    localStorage.removeItem('testMode');
+    localStorage.removeItem('relays');
+    localStorage.removeItem('zapRecipientNpub');
+    localStorage.removeItem('nip07Pubkey');
+    localStorage.removeItem('syncRelaysWithNip65');
     // 旧データも削除（後方互換性のため）
     localStorage.removeItem('coinosId');
     localStorage.removeItem('coinosPassword');
 
-    // フォームをクリア
-    lightningAddress = '';
+    // フォームをクリア（デフォルト値にリセット）
+    lightningAddress = OPENSATS_ADDRESS;
     nostrPrivateKey = '';
     coinosApiToken = '';
-    zapAmount = 100; // デフォルト値にリセット
-    pinCode = '0000'; // デフォルトPINにリセット
+    zapAmount = 100;
+    pinCode = '0000';
     fortuneMin = 1;
     fortuneMax = 20;
     fortuneTexts = '';
+    confettiFortuneTexts = '';
+    noConfettiFortuneTexts = '';
+    useDefaultFortuneTexts = false;
+    hideOmikujiMessage = false;
+    testMode = false;
+    relaysText = serializeRelays(DEFAULT_RELAYS);
+    zapRecipientNpub = OPENSATS_NPUB;
+    nip07LoggedIn = false;
+    nip07Pubkey = '';
+    nip07Npub = '';
+    syncRelaysWithNip65 = false;
 
     showDeleteMessage = true;
     setTimeout(() => {
@@ -268,18 +414,98 @@ function handleClearData() {
           {/if}
         </div>
 
-        <!-- ライトニングアドレス -->
+        <!-- NIP-07ログイン -->
+        <div class="border-t pt-6">
+          <h2 class="text-lg font-semibold text-gray-900 mb-4">Nostr署名</h2>
+          {#if nip07LoggedIn}
+            <div class="p-3 bg-green-50 border border-green-200 rounded-md">
+              <div class="flex items-start justify-between">
+                <div class="flex items-start gap-3">
+                  {#if nip07Profile?.picture}
+                    <img src={nip07Profile.picture} alt="avatar" class="w-10 h-10 rounded-full flex-shrink-0" />
+                  {/if}
+                  <div>
+                    <p class="text-sm font-medium text-green-800">NIP-07ログイン中</p>
+                    {#if nip07Profile?.display_name || nip07Profile?.name}
+                      <p class="text-sm text-green-700 font-semibold">{nip07Profile.display_name || nip07Profile.name}</p>
+                    {/if}
+                    {#if nip07Profile?.lud16}
+                      <p class="text-xs text-green-600 mt-0.5">{nip07Profile.lud16}</p>
+                    {/if}
+                    <p class="text-xs text-green-600 font-mono mt-1 break-all">{nip07Npub}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  on:click={handleNip07Logout}
+                  class="ml-3 text-sm text-red-600 hover:text-red-800 underline flex-shrink-0"
+                >
+                  ログアウト
+                </button>
+              </div>
+            </div>
+          {:else}
+            <div class="p-3 bg-gray-50 border border-gray-200 rounded-md">
+              <p class="text-sm text-gray-600 mb-3">
+                NIP-07ブラウザ拡張（nos2x, Albyなど）でログインすると、秘密鍵を入力せずにZapリクエストに署名できます。
+              </p>
+              {#if nip07Available}
+                <button
+                  type="button"
+                  on:click={handleNip07Login}
+                  class="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+                >
+                  NIP-07でログイン
+                </button>
+              {:else}
+                <p class="text-sm text-gray-400">NIP-07拡張が検出されませんでした</p>
+              {/if}
+              {#if nip07LoginError}
+                <p class="mt-2 text-sm text-red-600">{nip07LoginError}</p>
+              {/if}
+            </div>
+          {/if}
+        </div>
+
+        <!-- Zap先の公開鍵 -->
         <div>
+          <label for="zap-recipient-npub" class="block text-sm font-medium text-gray-700 mb-2">
+            Zap先の公開鍵（npub形式・任意）
+          </label>
+          <input
+            id="zap-recipient-npub"
+            type="text"
+            bind:value={zapRecipientNpub}
+            placeholder="npub1..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+            class:border-red-500={errors.zapRecipientNpub}
+          />
+          {#if errors.zapRecipientNpub}
+            <p class="mt-1 text-sm text-red-600">{errors.zapRecipientNpub}</p>
+          {:else}
+            <p class="mt-1 text-sm text-gray-500">
+              Nostr公開鍵のkind:0からlud16を取得してZapします。
+              未設定の場合は下のライトニングアドレスとNostr秘密鍵が使われます。
+            </p>
+          {/if}
+        </div>
+
+        <!-- ライトニングアドレス -->
+        <div class:opacity-40={zapRecipientNpub.trim()}>
           <label for="lightning-address" class="block text-sm font-medium text-gray-700 mb-2">
             ライトニングアドレス
+            {#if testMode}<span class="ml-1 text-xs font-normal text-gray-400">（テストモード時は任意）</span>{/if}
           </label>
           <input
             id="lightning-address"
             type="email"
             bind:value={lightningAddress}
             placeholder="user@domain.com"
+            disabled={!!zapRecipientNpub.trim()}
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             class:border-red-500={errors.lightningAddress}
+            class:bg-gray-100={!!zapRecipientNpub.trim()}
+            class:cursor-not-allowed={!!zapRecipientNpub.trim()}
           />
           {#if errors.lightningAddress}
             <p class="mt-1 text-sm text-red-600">{errors.lightningAddress}</p>
@@ -287,17 +513,22 @@ function handleClearData() {
         </div>
 
         <!-- Nostr秘密鍵 -->
-        <div>
+        <div class:opacity-40={nip07LoggedIn}>
           <label for="nostr-private-key" class="block text-sm font-medium text-gray-700 mb-2">
             Nostr秘密鍵 (nsec形式)
+            {#if nip07LoggedIn}<span class="ml-1 text-xs font-normal text-gray-400">（NIP-07ログイン中は不要）</span>
+            {:else if testMode}<span class="ml-1 text-xs font-normal text-gray-400">（テストモード時は任意）</span>{/if}
           </label>
           <input
             id="nostr-private-key"
             type="password"
             bind:value={nostrPrivateKey}
             placeholder="nsec1..."
+            disabled={nip07LoggedIn}
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             class:border-red-500={errors.nostrPrivateKey}
+            class:bg-gray-100={nip07LoggedIn}
+            class:cursor-not-allowed={nip07LoggedIn}
           />
           {#if errors.nostrPrivateKey}
             <p class="mt-1 text-sm text-red-600">{errors.nostrPrivateKey}</p>
@@ -383,69 +614,209 @@ function handleClearData() {
           {/if}
         </div>
 
+        <!-- リレー設定 -->
+        <div class="border-t pt-6">
+          <h2 class="text-lg font-semibold text-gray-900 mb-4">リレー設定</h2>
+
+          {#if nip07LoggedIn}
+            <div class="flex items-center mb-3">
+              <input
+                id="sync-relays-nip65"
+                type="checkbox"
+                bind:checked={syncRelaysWithNip65}
+                on:change={handleSyncRelaysChange}
+                disabled={syncRelaysLoading}
+                class="h-4 w-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+              />
+              <label for="sync-relays-nip65" class="ml-2 text-sm text-gray-700">
+                kind:10002（NIP-65）からリレーを同期する
+                {#if syncRelaysLoading}<span class="ml-1 text-xs text-gray-400">取得中...</span>{/if}
+              </label>
+            </div>
+            {#if syncRelaysError}
+              <p class="mb-2 text-sm text-red-600">{syncRelaysError}</p>
+            {/if}
+          {/if}
+
+          <div>
+            <label for="relays-text" class="block text-sm font-medium text-gray-700 mb-2">
+              Nostrリレー（1行に1つ）
+            </label>
+            <textarea
+              id="relays-text"
+              bind:value={relaysText}
+              rows="5"
+              placeholder="wss://relay.damus.io/"
+              disabled={syncRelaysWithNip65}
+              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+              class:border-red-500={errors.relays}
+              class:bg-gray-100={syncRelaysWithNip65}
+              class:cursor-not-allowed={syncRelaysWithNip65}
+            ></textarea>
+            {#if errors.relays}
+              <p class="mt-1 text-sm text-red-600">{errors.relays}</p>
+            {:else}
+              <p class="mt-1 text-sm text-gray-500">Zap Receipt の監視に使用するリレーを設定します</p>
+            {/if}
+            {#if !syncRelaysWithNip65}
+              <button
+                type="button"
+                on:click={() => { relaysText = serializeRelays(DEFAULT_RELAYS); }}
+                class="mt-2 text-sm text-blue-600 hover:text-blue-800 underline"
+              >
+                デフォルトに戻す
+              </button>
+            {/if}
+          </div>
+        </div>
+
         <!-- くじの範囲設定 -->
         <div class="border-t pt-6">
           <h2 class="text-lg font-semibold text-gray-900 mb-4">おみくじ設定</h2>
-          
-          <div class="grid grid-cols-2 gap-4 mb-4">
-            <!-- 最小値 -->
-            <div>
-              <label for="fortune-min" class="block text-sm font-medium text-gray-700 mb-2">
-                最小値
-              </label>
-              <input
-                id="fortune-min"
-                type="number"
-                min="1"
-                step="1"
-                bind:value={fortuneMin}
-                placeholder="1"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                class:border-red-500={errors.fortuneMin}
-              />
-              {#if errors.fortuneMin}
-                <p class="mt-1 text-sm text-red-600">{errors.fortuneMin}</p>
-              {/if}
-            </div>
 
-            <!-- 最大値 -->
-            <div>
-              <label for="fortune-max" class="block text-sm font-medium text-gray-700 mb-2">
-                最大値
-              </label>
-              <input
-                id="fortune-max"
-                type="number"
-                min="1"
-                step="1"
-                bind:value={fortuneMax}
-                placeholder="20"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                class:border-red-500={errors.fortuneMax}
-              />
-              {#if errors.fortuneMax}
-                <p class="mt-1 text-sm text-red-600">{errors.fortuneMax}</p>
-              {/if}
-            </div>
+          <!-- 紙のおみくじを促すメッセージ非表示設定 -->
+          <div class="flex items-center mb-4">
+            <input
+              id="hide-omikuji-message"
+              type="checkbox"
+              bind:checked={hideOmikujiMessage}
+              class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label for="hide-omikuji-message" class="ml-2 text-sm text-gray-700">
+              紙のおみくじを促すメッセージを表示しない
+            </label>
           </div>
-          <p class="text-sm text-gray-500 mb-4">くじの数字の範囲を設定します（例：1〜20）</p>
+
+          <!-- 紙おみくじ番号設定（hideOmikujiMessage=false の時のみ有効） -->
+          <div class="mb-4 p-3 border border-gray-200 rounded-md" class:opacity-40={hideOmikujiMessage}>
+            <p class="text-sm font-medium text-gray-700 mb-3">紙おみくじの番号設定</p>
+            <div class="grid grid-cols-2 gap-4">
+              <!-- 最小値 -->
+              <div>
+                <label for="fortune-min" class="block text-xs font-medium text-gray-600 mb-1">
+                  最小値
+                </label>
+                <input
+                  id="fortune-min"
+                  type="number"
+                  min="1"
+                  step="1"
+                  bind:value={fortuneMin}
+                  placeholder="1"
+                  disabled={hideOmikujiMessage}
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  class:border-red-500={errors.fortuneMin}
+                  class:bg-gray-100={hideOmikujiMessage}
+                  class:cursor-not-allowed={hideOmikujiMessage}
+                />
+                {#if errors.fortuneMin}
+                  <p class="mt-1 text-sm text-red-600">{errors.fortuneMin}</p>
+                {/if}
+              </div>
+
+              <!-- 最大値 -->
+              <div>
+                <label for="fortune-max" class="block text-xs font-medium text-gray-600 mb-1">
+                  最大値
+                </label>
+                <input
+                  id="fortune-max"
+                  type="number"
+                  min="1"
+                  step="1"
+                  bind:value={fortuneMax}
+                  placeholder="20"
+                  disabled={hideOmikujiMessage}
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  class:border-red-500={errors.fortuneMax}
+                  class:bg-gray-100={hideOmikujiMessage}
+                  class:cursor-not-allowed={hideOmikujiMessage}
+                />
+                {#if errors.fortuneMax}
+                  <p class="mt-1 text-sm text-red-600">{errors.fortuneMax}</p>
+                {/if}
+              </div>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">紙おみくじの番号範囲を設定します（例：1〜20）</p>
+          </div>
 
           <!-- おみくじ内容 -->
           <div>
-            <label for="fortune-texts" class="block text-sm font-medium text-gray-700 mb-2">
-              おみくじの内容（オプション）
-            </label>
-            <textarea
-              id="fortune-texts"
-              bind:value={fortuneTexts}
-              placeholder="大吉,中吉,小吉,吉,末吉,凶,大凶"
-              rows="3"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+            <div class="flex items-center justify-between mb-2">
+              <label class="block text-sm font-medium text-gray-700">
+                おみくじの内容
+              </label>
+              <div class="flex items-center">
+                <input
+                  id="use-default-fortune-texts"
+                  type="checkbox"
+                  bind:checked={useDefaultFortuneTexts}
+                  on:change={handleUseDefaultFortuneTextsChange}
+                  class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label for="use-default-fortune-texts" class="ml-2 text-sm text-gray-700">
+                  デフォルト設定
+                </label>
+              </div>
+            </div>
+
+            <!-- 紙吹雪あり -->
+            <div class="mb-3">
+              <label for="confetti-fortune-texts" class="block text-xs font-medium text-gray-600 mb-1">
+                紙吹雪を表示する内容（カンマ区切り）
+              </label>
+              <textarea
+                id="confetti-fortune-texts"
+                bind:value={confettiFortuneTexts}
+                placeholder="大吉,中吉,小吉,吉,末吉"
+                rows="2"
+                disabled={useDefaultFortuneTexts}
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                class:bg-gray-100={useDefaultFortuneTexts}
+                class:cursor-not-allowed={useDefaultFortuneTexts}
+              ></textarea>
+            </div>
+
+            <!-- 紙吹雪なし -->
+            <div class="mb-2">
+              <label for="no-confetti-fortune-texts" class="block text-xs font-medium text-gray-600 mb-1">
+                紙吹雪を表示しない内容（カンマ区切り）
+              </label>
+              <textarea
+                id="no-confetti-fortune-texts"
+                bind:value={noConfettiFortuneTexts}
+                placeholder="凶,大凶"
+                rows="2"
+                disabled={useDefaultFortuneTexts}
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                class:bg-gray-100={useDefaultFortuneTexts}
+                class:cursor-not-allowed={useDefaultFortuneTexts}
+              ></textarea>
+            </div>
+
             <p class="mt-1 text-sm text-gray-500">
-              カンマ区切りでおみくじの内容を入力します。空欄の場合は数字のみ表示されます。<br/>
-              数字が配列の長さを超える場合は、循環して表示されます。
+              両方を合わせた配列がおみくじ結果になります。数字が配列の長さを超える場合は循環します。
             </p>
+          </div>
+
+          <!-- テストモード -->
+          <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+            <div class="flex items-center">
+              <input
+                id="test-mode"
+                type="checkbox"
+                bind:checked={testMode}
+                class="h-4 w-4 text-yellow-600 border-gray-300 rounded focus:ring-yellow-500"
+              />
+              <label for="test-mode" class="ml-2 text-sm font-medium text-yellow-800">
+                テストモード（外部通信なしでくじを引ける）
+              </label>
+            </div>
+            {#if testMode}
+              <p class="mt-2 text-xs text-yellow-700">
+                ライトニングアドレス・Nostr秘密鍵の設定なしで動作します。Zapや外部APIへの通信は行いません。
+              </p>
+            {/if}
           </div>
         </div>
 

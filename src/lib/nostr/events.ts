@@ -1,10 +1,8 @@
-import { nip19, nip57, getPublicKey, finalizeEvent, type EventTemplate } from 'nostr-tools';
-import type { NostrEvent, MetadataContent } from './types.js';
-import { RELAYS } from './relay.js';
+import { nip19, nip57, finalizeEvent, type EventTemplate } from 'nostr-tools';
+import type { NostrEvent, MetadataContent } from './types';
+import { getRelays } from './relay';
+import { nip07SignEvent } from './nip07';
 
-/**
- * nsec形式の秘密鍵をhex形式に変換
- */
 export function decodeNsec(nsec: string): Uint8Array {
   if (!nsec.startsWith('nsec1')) {
     throw new Error('Invalid nsec format. Must start with nsec1');
@@ -18,62 +16,75 @@ export function decodeNsec(nsec: string): Uint8Array {
   return decoded.data;
 }
 
-/**
- * Nostr kind 1イベントを作成
- */
+function buildZapRequestTemplate(
+  targetEvent: NostrEvent,
+  amount: number,
+  comment: string,
+  recipientPubkey?: string,
+): EventTemplate {
+  const params = recipientPubkey
+    ? { pubkey: recipientPubkey, amount, comment, relays: getRelays() }
+    : { event: targetEvent, amount, comment, relays: getRelays() };
+  return nip57.makeZapRequest(params);
+}
+
 export function createTextEvent(privateKeyHex: Uint8Array, content: string, tags: string[][] = []): NostrEvent {
   const event: EventTemplate = {
     kind: 1,
     created_at: Math.floor(Date.now() / 1000),
     tags,
-    content: content,
+    content,
   };
-
-  const signedEvent = finalizeEvent(event, privateKeyHex);
-
-  return signedEvent as NostrEvent;
+  return finalizeEvent(event, privateKeyHex) as NostrEvent;
 }
 
-/**
- * Zap Request イベント（kind 9734）を作成 (nostr-toolsのnip57.makeZapRequestを使用)
- */
+/** recipientPubkey を指定するとProfileZapモード（特定pubkey宛）になる */
 export function createZapRequest(
   privateKeyHex: Uint8Array,
   targetEvent: NostrEvent,
   amount?: number,
   comment?: string,
+  recipientPubkey?: string,
 ): NostrEvent {
-  const zapRequestTemplate = nip57.makeZapRequest({
-    event: targetEvent,
-    amount: amount || 1000,
-    comment: comment || '',
-    relays: RELAYS,
-  });
-
-  // テンプレートに署名してEventに変換
-  const signedEvent = finalizeEvent(zapRequestTemplate, privateKeyHex);
-  return signedEvent as NostrEvent;
+  const template = buildZapRequestTemplate(targetEvent, amount || 1000, comment || '', recipientPubkey);
+  return finalizeEvent(template, privateKeyHex) as NostrEvent;
 }
 
-/**
- * ユーザーのmetadata eventを作成（簡易実装）
- * ライブラリを利用してZapリクエストを作成するためだけに使うため実際に署名する必要はない
- */
+export async function createTextEventNip07(content: string, tags: string[][] = []): Promise<NostrEvent> {
+  const event: EventTemplate = {
+    kind: 1,
+    created_at: Math.floor(Date.now() / 1000),
+    tags,
+    content,
+  };
+  return nip07SignEvent(event);
+}
+
+/** recipientPubkey を指定するとProfileZapモード（特定pubkey宛）になる */
+export async function createZapRequestNip07(
+  targetEvent: NostrEvent,
+  amount?: number,
+  comment?: string,
+  recipientPubkey?: string,
+): Promise<NostrEvent> {
+  const template = buildZapRequestTemplate(targetEvent, amount || 1000, comment || '', recipientPubkey);
+  return nip07SignEvent(template);
+}
+
+/** Zapエンドポイント取得用の簡易metadataイベント（署名不要） */
 export function createMetadataEvent(pubkey: string, lud16?: string): NostrEvent {
   const metadataContent: MetadataContent = {};
   if (lud16) {
     metadataContent.lud16 = lud16;
   }
 
-  const event = {
+  return {
     kind: 0,
-    pubkey: pubkey,
+    pubkey,
     created_at: Math.floor(Date.now() / 1000),
     tags: [],
     content: JSON.stringify(metadataContent),
-    id: 'temp-id', // 一時的なID
-    sig: 'temp-sig', // 一時的な署名
-  };
-
-  return event as NostrEvent;
+    id: 'temp-id',
+    sig: 'temp-sig',
+  } as NostrEvent;
 }
