@@ -351,11 +351,17 @@ function handleLightningComplete() {
 </script>
 
 <div class="min-h-screen py-12 px-4 sm:px-6 lg:px-8 bg-cover bg-center relative flex flex-col" style="background-image: url('{backgroundImage}');">
+  <!-- テストモード警告バナー: オペレータがオフ忘れに気付けるように常時表示 -->
+  {#if testMode}
+    <div class="fixed top-0 left-0 right-0 z-40 bg-red-700 text-white text-center py-2 text-sm font-bold tracking-wide shadow-md">
+      ⚠ TEST MODE — no zap is sent. Disable in settings before going live.
+    </div>
+  {/if}
   <!-- GitHub link - positioned at the bottom left -->
-  <a 
-    href="https://github.com/ocknamo/nostr-fortune-slip" 
-    target="_blank" 
-    rel="noopener noreferrer" 
+  <a
+    href="https://github.com/ocknamo/nostr-fortune-slip"
+    target="_blank"
+    rel="noopener noreferrer"
     class="absolute bottom-3 left-3 text-s text-white/70 hover:text-white/90 transition-colors z-100"
     aria-label="GitHub repository"
   >
@@ -431,6 +437,8 @@ function handleLightningComplete() {
                 </svg>
                 Generating...
               </div>
+            {:else if testMode}
+              Test draw (no zap)
             {:else}
               Pray for {zapAmount} sats
             {/if}
