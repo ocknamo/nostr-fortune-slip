@@ -1,47 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
-import { decodeNsec, createTextEvent, createZapRequest, createMetadataEvent } from './events.js';
+import { createTextEvent, createZapRequest, createMetadataEvent } from './events.js';
 import type { NostrEvent } from './types.js';
-import { nip19, nip57, finalizeEvent } from 'nostr-tools';
+import { nip57, finalizeEvent } from 'nostr-tools';
 
 // Mock nostr-tools
 vi.mock('nostr-tools', () => ({
-  nip19: {
-    decode: vi.fn(),
-  },
   nip57: {
     makeZapRequest: vi.fn(),
   },
   finalizeEvent: vi.fn(),
 }));
-
-describe('decodeNsec', () => {
-  it('should decode valid nsec key', () => {
-    const mockSecretKey = new Uint8Array(32);
-    vi.mocked(nip19.decode).mockReturnValue({
-      type: 'nsec',
-      data: mockSecretKey,
-    });
-
-    const result = decodeNsec('nsec1testkey');
-
-    expect(result).toBe(mockSecretKey);
-    expect(nip19.decode).toHaveBeenCalledWith('nsec1testkey');
-  });
-
-  it('should throw error for invalid nsec format', () => {
-    expect(() => decodeNsec('npub1testkey')).toThrow('Invalid nsec format. Must start with nsec1');
-    expect(() => decodeNsec('invalid')).toThrow('Invalid nsec format. Must start with nsec1');
-  });
-
-  it('should throw error for invalid decoded type', () => {
-    vi.mocked(nip19.decode).mockReturnValue({
-      type: 'npub',
-      data: 'invalid',
-    });
-
-    expect(() => decodeNsec('nsec1testkey')).toThrow('Invalid nsec key');
-  });
-});
 
 describe('createTextEvent', () => {
   it('should create valid text event', () => {

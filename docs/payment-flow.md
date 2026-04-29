@@ -24,11 +24,11 @@ sequenceDiagram
     Note over App: アプリケーション初期化
     User->>App: "Pray for XX sats" ボタン押下
     App->>Storage: 設定データ読み込み
-    Storage-->>App: lightningAddress, nostrPrivateKey, coinosApiToken
+    Storage-->>App: lightningAddress, coinosApiToken
     
     rect rgb(240, 240, 240)
         Note over App, LN: QRコード生成フェーズ
-        App->>App: 1. Nostr秘密鍵をデコード
+        App->>App: 1. ドロー毎の使い捨てNostr秘密鍵を生成
         App->>App: 2. kind 1イベント作成（Fortune Slip Request）
         App->>Nostr: 3. イベント送信
         Nostr-->>App: 送信完了
