@@ -65,6 +65,9 @@ let LightningReveal: Component<LightningRevealProps> | null = null;
 // 設定データを読み込み
 onMount(() => {
   if (typeof window !== 'undefined') {
+    // 旧バージョンで保存された秘密鍵が残っていたら削除（マイグレーション）
+    localStorage.removeItem('nostrPrivateKey');
+
     lightningAddress = localStorage.getItem('lightningAddress') || '';
     coinosApiToken = localStorage.getItem('coinosApiToken') || '';
     const storedZapAmount = localStorage.getItem('zapAmount');
@@ -231,8 +234,9 @@ async function startFortuneDraw() {
     const textEvent = createTextEvent(privateKeyBytes, '');
 
     // 3. recipientのmetadata eventを作成（簡易版）
-    // 実際のアプリではリレーから取得するが、ここでは設定値から作成
-    const recipientPubkey = textEvent.pubkey; // 自分自身にzapする場合
+    // 入金先は lightningAddress で決まるため、recipientPubkey は
+    // ephemeral 鍵から導出した形式上のものでよい
+    const recipientPubkey = textEvent.pubkey;
     const metadataEvent = createMetadataEvent(recipientPubkey, lightningAddress);
 
     // 4. zapUrl取得

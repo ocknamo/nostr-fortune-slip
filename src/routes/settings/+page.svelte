@@ -151,7 +151,6 @@ function togglePinVisibility() {
 function handleClearData() {
   if (confirm('保存されているすべての設定データを削除しますか？この操作は取り消せません。')) {
     localStorage.removeItem('lightningAddress');
-    localStorage.removeItem('nostrPrivateKey');
     localStorage.removeItem('coinosApiToken');
     localStorage.removeItem('zapAmount');
     localStorage.removeItem('settingsPin');
@@ -162,6 +161,7 @@ function handleClearData() {
     localStorage.removeItem('testMode');
     localStorage.removeItem('animationStyle');
     // 旧データも削除（後方互換性のため）
+    localStorage.removeItem('nostrPrivateKey');
     localStorage.removeItem('coinosId');
     localStorage.removeItem('coinosPassword');
 
@@ -227,8 +227,8 @@ function handleClearData() {
           <div class="ml-3">
             <h3 class="text-sm font-medium text-yellow-800">セキュリティについて</h3>
             <div class="mt-2 text-sm text-yellow-700">
-              <p>設定データはブラウザのLocalStorageに保存されます。他の人がこのデバイスにアクセスできる場合や、悪意のあるスクリプトがある場合、データが読み取られる可能性があります。機密性の低い環境では使用を避けてください。</p>
-              <p>また利用後はデータを削除してください。</p>
+              <p>設定データ（ライトニングアドレス・Coinos Read-Only API Token・PIN 等）はブラウザのLocalStorageに平文で保存されます。他の人がこのデバイスにアクセスできる場合や、悪意のあるスクリプトがある場合、特に Coinos API Token が読み取られる可能性があります。</p>
+              <p>共用端末で運用する場合は、利用後にデータを削除してください。</p>
             </div>
           </div>
         </div>
