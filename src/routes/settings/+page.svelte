@@ -16,6 +16,9 @@ let pinCode = ''; // PIN設定用
 let fortuneMin = 1; // くじの最小値
 let fortuneMax = 20; // くじの最大値
 let fortuneTexts = ''; // くじの内容（カンマ区切り）
+let hideOmikujiMessage = false; // 紙のおみくじを促すメッセージと番号を非表示にする
+let testMode = false; // zapを介さずにくじを引けるテストモード
+let animationStyle: 'normal' | 'flashy' = 'normal'; // 演出スタイル
 
 // UI状態
 let showSuccessMessage = false;
@@ -57,6 +60,10 @@ onMount(() => {
     const storedFortuneMax = localStorage.getItem('fortuneMax');
     fortuneMax = storedFortuneMax ? parseInt(storedFortuneMax, 10) : 20;
     fortuneTexts = localStorage.getItem('fortuneTexts') || '';
+    hideOmikujiMessage = localStorage.getItem('hideOmikujiMessage') === 'true';
+    testMode = localStorage.getItem('testMode') === 'true';
+    const storedAnimationStyle = localStorage.getItem('animationStyle');
+    animationStyle = storedAnimationStyle === 'flashy' ? 'flashy' : 'normal';
   }
 });
 
@@ -121,6 +128,9 @@ function handleSave() {
     localStorage.setItem('fortuneMin', fortuneMin.toString());
     localStorage.setItem('fortuneMax', fortuneMax.toString());
     localStorage.setItem('fortuneTexts', fortuneTexts);
+    localStorage.setItem('hideOmikujiMessage', hideOmikujiMessage ? 'true' : 'false');
+    localStorage.setItem('testMode', testMode ? 'true' : 'false');
+    localStorage.setItem('animationStyle', animationStyle);
 
     showSuccessMessage = true;
     setTimeout(() => {
@@ -155,6 +165,9 @@ function handleClearData() {
     localStorage.removeItem('fortuneMin');
     localStorage.removeItem('fortuneMax');
     localStorage.removeItem('fortuneTexts');
+    localStorage.removeItem('hideOmikujiMessage');
+    localStorage.removeItem('testMode');
+    localStorage.removeItem('animationStyle');
     // 旧データも削除（後方互換性のため）
     localStorage.removeItem('coinosId');
     localStorage.removeItem('coinosPassword');
@@ -168,6 +181,9 @@ function handleClearData() {
     fortuneMin = 1;
     fortuneMax = 20;
     fortuneTexts = '';
+    hideOmikujiMessage = false;
+    testMode = false;
+    animationStyle = 'normal';
 
     showDeleteMessage = true;
     setTimeout(() => {
@@ -441,11 +457,86 @@ function handleClearData() {
               placeholder="大吉,中吉,小吉,吉,末吉,凶,大凶"
               rows="3"
               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+            ></textarea>
             <p class="mt-1 text-sm text-gray-500">
               カンマ区切りでおみくじの内容を入力します。空欄の場合は数字のみ表示されます。<br/>
               数字が配列の長さを超える場合は、循環して表示されます。
             </p>
+          </div>
+
+          <!-- 紙のおみくじを促すメッセージと番号を非表示にする -->
+          <div class="mt-4">
+            <label class="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                bind:checked={hideOmikujiMessage}
+                class="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span>
+                紙のおみくじを促すメッセージと番号を非表示にする
+                <span class="block text-xs text-gray-500 mt-0.5">
+                  チェックすると "Please take your numbered omikuji." と番号を隠し、
+                  おみくじテキスト（大吉など）を大きく表示します。
+                </span>
+              </span>
+            </label>
+          </div>
+
+          <!-- テストモード -->
+          <div class="mt-4 p-3 bg-yellow-50 border border-yellow-300 rounded-md">
+            <label class="flex items-start gap-2 text-sm text-yellow-900 cursor-pointer">
+              <input
+                type="checkbox"
+                bind:checked={testMode}
+                class="mt-1 h-4 w-4 rounded border-yellow-500 text-yellow-600 focus:ring-yellow-500"
+              />
+              <span>
+                テストモード（zapせずにくじを引く）
+                <span class="block text-xs text-yellow-800 mt-0.5">
+                  本番では必ずオフにしてください。動作確認用にzapとQRコード表示をスキップして
+                  即座に番号を引きます。
+                </span>
+              </span>
+            </label>
+          </div>
+
+          <!-- 演出スタイル -->
+          <div class="mt-4">
+            <fieldset>
+              <legend class="block text-sm font-medium text-gray-700 mb-2">演出スタイル</legend>
+              <div class="space-y-2">
+                <label class="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="animationStyle"
+                    value="normal"
+                    bind:group={animationStyle}
+                    class="mt-1 h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span>
+                    ノーマル
+                    <span class="block text-xs text-gray-500 mt-0.5">
+                      従来のおみくじアニメーションのみを再生します。
+                    </span>
+                  </span>
+                </label>
+                <label class="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="animationStyle"
+                    value="flashy"
+                    bind:group={animationStyle}
+                    class="mt-1 h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span>
+                    派手
+                    <span class="block text-xs text-gray-500 mt-0.5">
+                      おみくじテキスト表示直前に稲妻と紙吹雪の演出を追加します。
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </fieldset>
           </div>
         </div>
 
