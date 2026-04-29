@@ -1,4 +1,4 @@
-import type { NostrEvent } from './types';
+import type { NostrEvent } from './types.js';
 
 /**
  * ラッキーナンバーを生成（min-maxの範囲）
@@ -20,14 +20,6 @@ export function getFortuneText(luckyNumber: number, fortuneTexts: string[]): str
   // Convert to 0-based index and cycle through array using modulo
   const index = (luckyNumber - 1) % fortuneTexts.length;
   return fortuneTexts[index];
-}
-
-/**
- * おみくじ結果が紙吹雪を表示すべきかどうか判定
- */
-export function shouldShowConfetti(text: string | null, confettiTexts: string[]): boolean {
-  if (!text || confettiTexts.length === 0) return false;
-  return confettiTexts.includes(text);
 }
 
 /**
