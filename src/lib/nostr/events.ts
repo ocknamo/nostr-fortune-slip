@@ -1,22 +1,6 @@
-import { nip19, nip57, getPublicKey, finalizeEvent, type EventTemplate } from 'nostr-tools';
+import { nip57, finalizeEvent, type EventTemplate } from 'nostr-tools';
 import type { NostrEvent, MetadataContent } from './types.js';
 import { RELAYS } from './relay.js';
-
-/**
- * nsec形式の秘密鍵をhex形式に変換
- */
-export function decodeNsec(nsec: string): Uint8Array {
-  if (!nsec.startsWith('nsec1')) {
-    throw new Error('Invalid nsec format. Must start with nsec1');
-  }
-
-  const decoded = nip19.decode(nsec);
-  if (decoded.type !== 'nsec') {
-    throw new Error('Invalid nsec key');
-  }
-
-  return decoded.data;
-}
 
 /**
  * Nostr kind 1イベントを作成

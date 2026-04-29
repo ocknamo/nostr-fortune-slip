@@ -6,7 +6,6 @@ import settingsIcon from '$lib/assets/settings.svg';
 import OmikujiAnimation from '$lib/components/OmikujiAnimation.svelte';
 import type { Component } from 'svelte';
 import {
-  decodeNsec,
   createTextEvent,
   createZapRequest,
   createMetadataEvent,
@@ -19,7 +18,7 @@ import {
   getFortuneText,
 } from '$lib/nostr';
 import { generateLightningQRCode, generateQRCode } from '$lib/qrcode';
-import { nip57 } from 'nostr-tools';
+import { generateSecretKey, nip57 } from 'nostr-tools';
 import { startCoinosPolling, type CoinosPollingSubscription } from '$lib/coinos';
 
 import backgroundImage from '$lib/assets/background.jpg';
@@ -45,7 +44,6 @@ let autoResetTimerId: number | null = null;
 
 // 設定データ
 let lightningAddress = '';
-let nostrPrivateKey = '';
 let coinosApiToken = '';
 let zapAmount = 100; // Zap金額（sats）デフォルト値
 let fortuneMin = 1; // くじの最小値
@@ -68,7 +66,6 @@ let LightningReveal: Component<LightningRevealProps> | null = null;
 onMount(() => {
   if (typeof window !== 'undefined') {
     lightningAddress = localStorage.getItem('lightningAddress') || '';
-    nostrPrivateKey = localStorage.getItem('nostrPrivateKey') || '';
     coinosApiToken = localStorage.getItem('coinosApiToken') || '';
     const storedZapAmount = localStorage.getItem('zapAmount');
     zapAmount = storedZapAmount ? parseInt(storedZapAmount, 10) : 100; // デフォルト100 sats
@@ -219,16 +216,16 @@ async function startFortuneDraw() {
   }
 
   // 設定が不完全な場合は設定画面に誘導
-  if (!lightningAddress || !nostrPrivateKey) {
-    errorMessage = '設定が不完全です。まず設定画面でライトニングアドレスとNostr秘密鍵を入力してください。';
+  if (!lightningAddress) {
+    errorMessage = '設定が不完全です。まず設定画面でライトニングアドレスを入力してください。';
     return;
   }
 
   isLoading = true;
 
   try {
-    // 1. Nostr秘密鍵をデコード
-    const privateKeyBytes = decodeNsec(nostrPrivateKey);
+    // 1. ドロー毎に使い捨ての Nostr 秘密鍵を生成
+    const privateKeyBytes = generateSecretKey();
 
     // 2. Nostr kind 1イベントを作成・送信
     const textEvent = createTextEvent(privateKeyBytes, '');
