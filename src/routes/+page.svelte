@@ -304,12 +304,12 @@ function showSubmit() {
 }
 
 function startAutoReset() {
-  // 5分後に自動リセット（次の利用者が来るまでに結果を片付けつつ、
-  // 結果を読む時間を十分に確保する）
+  // 1分後に自動リセット（結果を読み取る時間を確保しつつ、次の利用者が
+  // 来た時に前の結果が残ったままにならないバランス）
   autoResetTimerId = window.setTimeout(() => {
-    console.log('[Fortune Slip] Auto-resetting after 5 minutes');
+    console.log('[Fortune Slip] Auto-resetting after 1 minute');
     resetFortuneSlip();
-  }, 300000);
+  }, 60000);
 }
 
 async function handleAnimationComplete() {
