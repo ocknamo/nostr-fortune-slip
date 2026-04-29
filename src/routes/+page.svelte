@@ -489,7 +489,7 @@ function handleLightningComplete() {
             <img
               src={nostrQrCodeDataUrl}
               alt="Nostr 紹介 ({NOSTR_INTRO_HOST})"
-              class="w-32 h-32 mx-auto rounded"
+              class="w-24 h-24 mx-auto rounded"
             />
             <p class="text-[10px] text-gray-500 mt-1 break-all">
               {NOSTR_INTRO_HOST}
