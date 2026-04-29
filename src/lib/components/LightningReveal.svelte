@@ -191,17 +191,7 @@ function startLightningAnimation(canvas: HTMLCanvasElement): number {
   return STRIKE_MS + GAP + STRIKE_MS;
 }
 
-function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== 'undefined' &&
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  );
-}
-
 function fireConfetti() {
-  if (prefersReducedMotion()) return;
-
   const colors = ['#facc15', '#fbbf24', '#f59e0b', '#ffffff', '#a855f7', '#38bdf8'];
   const s = window.innerWidth < 768 ? 0.5 : 1;
   const p = (n: number) => Math.round(n * s);
@@ -300,18 +290,12 @@ function fireConfetti() {
 onMount(() => {
   if (!canvasEl) return;
 
-  // 不特定多数を対象とするキオスクで全画面の白フラッシュ + 稲妻を出すため、
-  // prefers-reduced-motion の利用者には稲妻と紙吹雪をスキップして
-  // テキスト表示のみに切り替える（光感受性てんかん対策の一段目）
-  if (prefersReducedMotion()) {
-    phase = 'reveal';
-    const doneTimer = setTimeout(() => {
-      phase = 'done';
-      onComplete?.();
-    }, 1500);
-    return () => clearTimeout(doneTimer);
-  }
-
+  // この経路に来ている時点でオペレータが設定で「派手」を明示的に選択している。
+  // OS の prefers-reduced-motion はオペレータ自身の好みであって、
+  // キオスクの来場者の同意を表すものではないため、ここでは尊重しない。
+  // 確認なしで来場者にフラッシュ表示を見せたくない場合は、設定で
+  // 「ノーマル」を選ぶ運用にする。canvas-confetti 側の
+  // disableForReducedMotion オプションは無害なので残してある。
   canvasEl.width = window.innerWidth;
   canvasEl.height = window.innerHeight;
 
