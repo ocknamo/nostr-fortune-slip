@@ -255,8 +255,10 @@ async function startFortuneDraw() {
     }
 
     if (zapUrl === null) {
-      errorMessage = `Zapエンドポイントが見つかりません。ライトニングアドレス: ${lightningAddress}`;
-      throw new Error(`Zapエンドポイントが見つかりません。ライトニングアドレス: ${lightningAddress}`);
+      errorMessage = useKind0
+        ? 'プロフィールに Lightning Address が設定されていません。設定画面で Nostr pubkey を確認してください。'
+        : `Zapエンドポイントが見つかりません。ライトニングアドレス: ${lightningAddress}`;
+      throw new Error(errorMessage);
     }
 
     console.debug('[zap endpoint]', zapUrl);

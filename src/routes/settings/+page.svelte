@@ -11,6 +11,7 @@ import {
   clearCachedKind0,
   getLud16FromKind0,
   getDisplayNameFromKind0,
+  getKind0FetchedAt,
 } from '$lib/nostr/profile.js';
 
 // フォームデータ
@@ -32,6 +33,7 @@ let nostrPubkey = '';
 let useKind0 = false;
 let kind0FetchStatus: 'idle' | 'loading' | 'success' | 'error' | 'not_found' = 'idle';
 let kind0DisplayName = '';
+let kind0FetchedAt: number | null = null;
 let showLud16Dialog = false;
 let suggestedLud16 = '';
 
@@ -90,6 +92,7 @@ onMount(() => {
       if (cached) {
         kind0FetchStatus = 'success';
         kind0DisplayName = getDisplayNameFromKind0(cached);
+        kind0FetchedAt = getKind0FetchedAt();
       }
     }
   }
@@ -181,6 +184,7 @@ async function fetchProfile() {
   if (!nostrPubkey.trim()) return;
   kind0FetchStatus = 'loading';
   kind0DisplayName = '';
+  kind0FetchedAt = null;
   showLud16Dialog = false;
   try {
     const hex = npubToHex(nostrPubkey.trim());
@@ -190,6 +194,7 @@ async function fetchProfile() {
       return;
     }
     kind0DisplayName = getDisplayNameFromKind0(kind0);
+    kind0FetchedAt = getKind0FetchedAt();
     const lud16 = getLud16FromKind0(kind0);
     if (lud16) {
       suggestedLud16 = lud16;
@@ -198,6 +203,18 @@ async function fetchProfile() {
     kind0FetchStatus = 'success';
   } catch {
     kind0FetchStatus = 'error';
+  }
+}
+
+// pubkey が変更されたらキャッシュを無効化してチェックボックスをリセット
+function onNostrPubkeyInput() {
+  const savedPubkey = localStorage.getItem('nostrPubkey') || '';
+  if (nostrPubkey.trim() !== savedPubkey) {
+    clearCachedKind0();
+    kind0FetchStatus = 'idle';
+    kind0DisplayName = '';
+    kind0FetchedAt = null;
+    useKind0 = false;
   }
 }
 
@@ -247,6 +264,7 @@ function handleClearData() {
     useKind0 = false;
     kind0FetchStatus = 'idle';
     kind0DisplayName = '';
+    kind0FetchedAt = null;
 
     showDeleteMessage = true;
     setTimeout(() => {
@@ -601,6 +619,7 @@ function handleClearData() {
                 id="nostr-pubkey"
                 type="text"
                 bind:value={nostrPubkey}
+                on:input={onNostrPubkeyInput}
                 placeholder="npub1..."
                 class="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
               />
@@ -616,6 +635,9 @@ function handleClearData() {
 
             {#if kind0FetchStatus === 'success'}
               <p class="mt-2 text-sm text-green-700">✓ {kind0DisplayName || 'プロフィール取得済み'}</p>
+              {#if kind0FetchedAt}
+                <p class="mt-0.5 text-xs text-gray-400">最終取得: {new Date(kind0FetchedAt).toLocaleString()}</p>
+              {/if}
             {:else if kind0FetchStatus === 'not_found'}
               <p class="mt-2 text-sm text-red-600">プロフィールが見つかりませんでした</p>
             {:else if kind0FetchStatus === 'error'}

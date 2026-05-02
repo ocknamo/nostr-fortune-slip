@@ -1,9 +1,10 @@
-import { SimplePool } from 'nostr-tools';
+import { SimplePool, verifyEvent } from 'nostr-tools';
 import { nip19 } from 'nostr-tools';
 import type { NostrEvent } from './types.js';
 import { RELAYS } from './relay.js';
 
 const KIND0_CACHE_KEY = 'nostrKind0';
+const KIND0_FETCHED_AT_KEY = 'nostrKind0FetchedAt';
 
 export function npubToHex(npub: string): string {
   const decoded = nip19.decode(npub.trim());
@@ -15,11 +16,12 @@ export async function fetchKind0(pubkeyHex: string): Promise<NostrEvent | null> 
   const pool = new SimplePool();
   try {
     const event = await pool.get(RELAYS, { kinds: [0], authors: [pubkeyHex] });
-    if (event) {
-      localStorage.setItem(KIND0_CACHE_KEY, JSON.stringify(event));
-      return event as NostrEvent;
-    }
-    return null;
+    if (!event) return null;
+    // 悪意のあるリレーが偽の kind 0 を返すケースに備えて署名を検証
+    if (!verifyEvent(event)) return null;
+    localStorage.setItem(KIND0_CACHE_KEY, JSON.stringify(event));
+    localStorage.setItem(KIND0_FETCHED_AT_KEY, Date.now().toString());
+    return event as NostrEvent;
   } finally {
     pool.close(RELAYS);
   }
@@ -30,8 +32,14 @@ export function getCachedKind0(): NostrEvent | null {
   return stored ? (JSON.parse(stored) as NostrEvent) : null;
 }
 
+export function getKind0FetchedAt(): number | null {
+  const stored = localStorage.getItem(KIND0_FETCHED_AT_KEY);
+  return stored ? parseInt(stored, 10) : null;
+}
+
 export function clearCachedKind0(): void {
   localStorage.removeItem(KIND0_CACHE_KEY);
+  localStorage.removeItem(KIND0_FETCHED_AT_KEY);
 }
 
 export function getLud16FromKind0(kind0: NostrEvent): string | null {
