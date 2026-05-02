@@ -4,6 +4,14 @@ import { base } from '$app/paths';
 import { onMount } from 'svelte';
 
 import backgroundImage from '$lib/assets/background.jpg';
+import {
+  npubToHex,
+  fetchKind0,
+  getCachedKind0,
+  clearCachedKind0,
+  getLud16FromKind0,
+  getDisplayNameFromKind0,
+} from '$lib/nostr/profile.js';
 
 // フォームデータ
 let lightningAddress = '';
@@ -18,6 +26,14 @@ let fortuneTexts = ''; // くじの内容（カンマ区切り）
 let hideOmikujiMessage = false; // 紙のおみくじを促すメッセージと番号を非表示にする
 let testMode = false; // zapを介さずにくじを引けるテストモード
 let animationStyle: 'normal' | 'flashy' = 'normal'; // 演出スタイル
+
+// Nostr 連携
+let nostrPubkey = '';
+let useKind0 = false;
+let kind0FetchStatus: 'idle' | 'loading' | 'success' | 'error' | 'not_found' = 'idle';
+let kind0DisplayName = '';
+let showLud16Dialog = false;
+let suggestedLud16 = '';
 
 // UI状態
 let showSuccessMessage = false;
@@ -65,6 +81,17 @@ onMount(() => {
     testMode = localStorage.getItem('testMode') === 'true';
     const storedAnimationStyle = localStorage.getItem('animationStyle');
     animationStyle = storedAnimationStyle === 'flashy' ? 'flashy' : 'normal';
+
+    // Nostr 連携設定を読み込み
+    nostrPubkey = localStorage.getItem('nostrPubkey') || '';
+    useKind0 = localStorage.getItem('useKind0') === 'true';
+    if (nostrPubkey) {
+      const cached = getCachedKind0();
+      if (cached) {
+        kind0FetchStatus = 'success';
+        kind0DisplayName = getDisplayNameFromKind0(cached);
+      }
+    }
   }
 });
 
@@ -124,6 +151,8 @@ function handleSave() {
     localStorage.setItem('hideOmikujiMessage', hideOmikujiMessage ? 'true' : 'false');
     localStorage.setItem('testMode', testMode ? 'true' : 'false');
     localStorage.setItem('animationStyle', animationStyle);
+    localStorage.setItem('nostrPubkey', nostrPubkey);
+    localStorage.setItem('useKind0', useKind0 ? 'true' : 'false');
 
     showSuccessMessage = true;
     setTimeout(() => {
@@ -147,6 +176,40 @@ function togglePinVisibility() {
   showPin = !showPin;
 }
 
+// Nostr プロフィール取得
+async function fetchProfile() {
+  if (!nostrPubkey.trim()) return;
+  kind0FetchStatus = 'loading';
+  kind0DisplayName = '';
+  showLud16Dialog = false;
+  try {
+    const hex = npubToHex(nostrPubkey.trim());
+    const kind0 = await fetchKind0(hex);
+    if (!kind0) {
+      kind0FetchStatus = 'not_found';
+      return;
+    }
+    kind0DisplayName = getDisplayNameFromKind0(kind0);
+    const lud16 = getLud16FromKind0(kind0);
+    if (lud16) {
+      suggestedLud16 = lud16;
+      showLud16Dialog = true;
+    }
+    kind0FetchStatus = 'success';
+  } catch {
+    kind0FetchStatus = 'error';
+  }
+}
+
+function applyLud16() {
+  lightningAddress = suggestedLud16;
+  showLud16Dialog = false;
+}
+
+function dismissLud16Dialog() {
+  showLud16Dialog = false;
+}
+
 // データ削除処理
 function handleClearData() {
   if (confirm('保存されているすべての設定データを削除しますか？この操作は取り消せません。')) {
@@ -164,6 +227,10 @@ function handleClearData() {
     localStorage.removeItem('nostrPrivateKey');
     localStorage.removeItem('coinosId');
     localStorage.removeItem('coinosPassword');
+    // Nostr 連携データを削除
+    localStorage.removeItem('nostrPubkey');
+    localStorage.removeItem('useKind0');
+    clearCachedKind0();
 
     // フォームをクリア
     lightningAddress = '';
@@ -176,6 +243,10 @@ function handleClearData() {
     hideOmikujiMessage = false;
     testMode = false;
     animationStyle = 'normal';
+    nostrPubkey = '';
+    useKind0 = false;
+    kind0FetchStatus = 'idle';
+    kind0DisplayName = '';
 
     showDeleteMessage = true;
     setTimeout(() => {
@@ -514,6 +585,62 @@ function handleClearData() {
           </div>
         </div>
 
+        <!-- Nostr 連携 -->
+        <div class="border-t pt-6">
+          <h2 class="text-lg font-semibold text-gray-900 mb-1">Nostr 連携（オプション）</h2>
+          <p class="text-sm text-gray-500 mb-4">
+            Nostr の pubkey を指定すると、zap が pubkey に紐づいて記録されます。他のNostrクライアントからも履歴を確認できます。
+          </p>
+
+          <div>
+            <label for="nostr-pubkey" class="block text-sm font-medium text-gray-700 mb-2">
+              Nostr Pubkey
+            </label>
+            <div class="flex gap-2">
+              <input
+                id="nostr-pubkey"
+                type="text"
+                bind:value={nostrPubkey}
+                placeholder="npub1..."
+                class="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+              />
+              <button
+                type="button"
+                on:click={fetchProfile}
+                disabled={!nostrPubkey.trim() || kind0FetchStatus === 'loading'}
+                class="px-4 py-2 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-300 text-white text-sm font-medium rounded-md transition-colors"
+              >
+                {kind0FetchStatus === 'loading' ? '取得中...' : '取得'}
+              </button>
+            </div>
+
+            {#if kind0FetchStatus === 'success'}
+              <p class="mt-2 text-sm text-green-700">✓ {kind0DisplayName || 'プロフィール取得済み'}</p>
+            {:else if kind0FetchStatus === 'not_found'}
+              <p class="mt-2 text-sm text-red-600">プロフィールが見つかりませんでした</p>
+            {:else if kind0FetchStatus === 'error'}
+              <p class="mt-2 text-sm text-red-600">取得に失敗しました。pubkey の形式を確認してください</p>
+            {/if}
+          </div>
+
+          <div class="mt-4">
+            <label class="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                bind:checked={useKind0}
+                disabled={kind0FetchStatus !== 'success'}
+                class="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-40"
+              />
+              <span class:opacity-40={kind0FetchStatus !== 'success'}>
+                kind 0 を zap ターゲットとして使用する
+                <span class="block text-xs text-gray-500 mt-0.5">
+                  有効にすると zap が指定した pubkey に紐づき、Nostr リレーで履歴を追跡できます。
+                </span>
+              </span>
+            </label>
+          </div>
+        </div>
+
         <!-- 保存ボタン -->
         <div class="pt-4">
           <button
@@ -538,4 +665,32 @@ function handleClearData() {
     </div>
   </div>
 </div>
+
+<!-- lud16 確認ダイアログ -->
+{#if showLud16Dialog}
+  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+    <div class="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full">
+      <h3 class="text-lg font-semibold text-gray-900 mb-2">Lightning Address が見つかりました</h3>
+      <p class="text-sm text-gray-600 mb-3">プロフィールに以下の Lightning Address が登録されています。</p>
+      <p class="font-mono text-sm bg-gray-100 rounded px-3 py-2 mb-4 break-all">{suggestedLud16}</p>
+      <p class="text-sm text-gray-600 mb-4">Lightning Address に設定しますか？</p>
+      <div class="flex gap-3">
+        <button
+          type="button"
+          on:click={applyLud16}
+          class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+        >
+          適用
+        </button>
+        <button
+          type="button"
+          on:click={dismissLud16Dialog}
+          class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-md transition-colors"
+        >
+          キャンセル
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
 {/if}
