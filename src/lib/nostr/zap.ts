@@ -1,8 +1,12 @@
 import { SimplePool } from 'nostr-tools';
 import type { Event, Filter } from 'nostr-tools';
-import type { NostrEvent, ZapReceiptSubscription } from './types.js';
+import type { NostrEvent, ZapReceiptSubscription, ZapTarget } from './types.js';
 import { RELAYS } from './relay.js';
 import { verifyCoinosPayment } from '../coinos/index.js';
+
+function describeTarget(target: ZapTarget): string {
+  return target.type === 'event' ? `event:${target.eventId}` : `profile:${target.pubkey}`;
+}
 
 /**
  * Zapインボイスを直接取得（nostter風の実装）
@@ -43,7 +47,7 @@ export async function getZapInvoiceFromEndpoint(
  * Zap Receiptの妥当性を検証（同期版）
  * NIP-57 Appendix Fの仕様に基づく
  */
-export function validateZapReceipt(zapReceipt: NostrEvent, targetEventId: string, zapRequest: NostrEvent): boolean {
+export function validateZapReceipt(zapReceipt: NostrEvent, target: ZapTarget, zapRequest: NostrEvent): boolean {
   try {
     // kind 9735であることを確認
     if (zapReceipt.kind !== 9735) {
@@ -54,17 +58,26 @@ export function validateZapReceipt(zapReceipt: NostrEvent, targetEventId: string
     // 必要なタグの存在確認
     const bolt11Tag = zapReceipt.tags.find((tag) => tag[0] === 'bolt11');
     const descriptionTag = zapReceipt.tags.find((tag) => tag[0] === 'description');
-    const eTag = zapReceipt.tags.find((tag) => tag[0] === 'e');
 
     if (!bolt11Tag || !descriptionTag) {
       console.warn('Missing required tags in zap receipt');
       return false;
     }
 
-    // eTagが存在し、対象eventIdと一致することを確認
-    if (eTag && eTag[1] !== targetEventId) {
-      console.warn('Zap receipt event ID mismatch:', eTag[1], 'expected:', targetEventId);
-      return false;
+    if (target.type === 'event') {
+      // eTagが存在し、対象eventIdと一致することを確認
+      const eTag = zapReceipt.tags.find((tag) => tag[0] === 'e');
+      if (eTag && eTag[1] !== target.eventId) {
+        console.warn('Zap receipt event ID mismatch:', eTag[1], 'expected:', target.eventId);
+        return false;
+      }
+    } else {
+      // profile モード: NIP-57 仕様で p タグは MUST。recipient pubkey 一致を必須とする
+      const pTag = zapReceipt.tags.find((tag) => tag[0] === 'p');
+      if (!pTag || pTag[1] !== target.pubkey) {
+        console.warn('Zap receipt p tag mismatch:', pTag?.[1], 'expected:', target.pubkey);
+        return false;
+      }
     }
 
     // descriptionがzap requestと一致することを確認
@@ -92,13 +105,13 @@ export function validateZapReceipt(zapReceipt: NostrEvent, targetEventId: string
  */
 export async function validateZapReceiptWithCoinos(
   zapReceipt: NostrEvent,
-  targetEventId: string,
+  target: ZapTarget,
   zapRequest: NostrEvent,
   coinosApiToken?: string,
 ): Promise<{ valid: boolean; coinosVerified?: boolean; error?: string }> {
   try {
     // まず基本的なNostr検証を実行
-    const basicValid = validateZapReceipt(zapReceipt, targetEventId, zapRequest);
+    const basicValid = validateZapReceipt(zapReceipt, target, zapRequest);
 
     if (!basicValid) {
       return {
@@ -145,12 +158,16 @@ export async function validateZapReceiptWithCoinos(
 }
 
 /**
- * 特定のイベントに対するZap Receipt (kind 9735)を監視
+ * 特定のターゲット (event または profile) に対するZap Receipt (kind 9735)を監視
  * QRコード表示直後から開始し、zapが検知されたらコールバックを実行
  * Coinos API検証も含む
+ *
+ * - event ターゲット: ephemeral kind 1 を使う通常モード。`#e` フィルタで一意に絞り込む
+ * - profile ターゲット: useKind0 モード。`#p` フィルタを使う (kind 0 を `e` タグに
+ *   伝搬しない LN サービス実装が多いため、NIP-57 で MUST の `p` タグで購読する)
  */
 export function subscribeToZapReceipts(
-  targetEventId: string,
+  target: ZapTarget,
   zapRequest: NostrEvent,
   onZapReceived: (zapReceipt: NostrEvent) => void,
   timeoutMs: number = 300000, // 5分のタイムアウト
@@ -159,8 +176,9 @@ export function subscribeToZapReceipts(
 ): ZapReceiptSubscription {
   const pool = new SimplePool();
   const subscriptionId = `zap-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const targetLabel = describeTarget(target);
 
-  console.log(`[Zap Monitor] Starting subscription for event: ${targetEventId}`);
+  console.log(`[Zap Monitor] Starting subscription for target: ${targetLabel}`);
   console.log(`[Zap Monitor] Coinos verification enabled:`, !!coinosApiToken);
 
   // フィルターを正しいFilter型で作成
@@ -169,7 +187,7 @@ export function subscribeToZapReceipts(
   const filter: Filter = {
     kinds: [9735],
     since: Math.floor(Date.now() / 1000) - 300,
-    '#e': [targetEventId], // Filter型のindex signatureを使用
+    ...(target.type === 'event' ? { '#e': [target.eventId] } : { '#p': [target.pubkey] }),
   };
 
   console.log(`[Zap Monitor] Filter:`, JSON.stringify(filter, null, 2));
@@ -186,21 +204,16 @@ export function subscribeToZapReceipts(
 
         try {
           // Coinos API検証を含む総合的な検証を実行
-          const verificationResult = await validateZapReceiptWithCoinos(
-            zapReceipt,
-            targetEventId,
-            zapRequest,
-            coinosApiToken,
-          );
+          const verificationResult = await validateZapReceiptWithCoinos(zapReceipt, target, zapRequest, coinosApiToken);
 
           if (verificationResult.valid) {
-            console.log(`[Zap Monitor] Valid zap receipt detected for event: ${targetEventId}`);
+            console.log(`[Zap Monitor] Valid zap receipt detected for target: ${targetLabel}`);
             if (verificationResult.coinosVerified) {
               console.log(`[Zap Monitor] Coinos verification also passed`);
             }
             onZapReceived(zapReceipt);
           } else {
-            console.warn(`[Zap Monitor] Invalid zap receipt for event: ${targetEventId}`, verificationResult.error);
+            console.warn(`[Zap Monitor] Invalid zap receipt for target: ${targetLabel}`, verificationResult.error);
             // Coinos検証失敗の場合、エラーコールバックを呼び出す
             if (
               verificationResult.error &&
@@ -230,14 +243,14 @@ export function subscribeToZapReceipts(
 
   // タイムアウト設定
   const timeoutId = setTimeout(() => {
-    console.log(`[Zap Monitor] Subscription timeout for event: ${targetEventId}`);
+    console.log(`[Zap Monitor] Subscription timeout for target: ${targetLabel}`);
     subscription.close();
     pool.close(RELAYS);
   }, timeoutMs);
 
   // 停止関数
   const stop = () => {
-    console.log(`[Zap Monitor] Stopping subscription for event: ${targetEventId}`);
+    console.log(`[Zap Monitor] Stopping subscription for target: ${targetLabel}`);
     clearTimeout(timeoutId);
     subscription.close();
     // 少し待ってからプールを閉じる
@@ -249,7 +262,7 @@ export function subscribeToZapReceipts(
   return {
     pool,
     subscriptionId,
-    eventId: targetEventId,
+    target,
     onZapReceived,
     stop,
   };

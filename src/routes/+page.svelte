@@ -12,6 +12,7 @@ import {
   getZapInvoiceFromEndpoint,
   subscribeToZapReceipts,
   type ZapReceiptSubscription,
+  type ZapTarget,
   type NostrEvent,
   generateLuckyNumber,
   generateRandomBase64,
@@ -42,7 +43,7 @@ let coinosPollingSubscription: CoinosPollingSubscription | null = null;
 
 // Reconnect parameters retained to allow re-subscription when the WebSocket
 // drops (e.g. browsers suspending background tabs)
-let activeTargetEvent: NostrEvent | null = null;
+let activeTarget: ZapTarget | null = null;
 let activeZapRequest: NostrEvent | null = null;
 let activePaymentId: string | null = null;
 let isReconnecting = false;
@@ -154,7 +155,7 @@ function stopZapMonitoring() {
     coinosPollingSubscription = null;
   }
   isWaitingForZap = false;
-  activeTargetEvent = null;
+  activeTarget = null;
   activeZapRequest = null;
   activePaymentId = null;
   isReconnecting = false;
@@ -165,7 +166,7 @@ function stopZapMonitoring() {
 // tab becomes visible again, or manually via the reconnect button.
 function reconnectMonitoring() {
   if (zapDetected) return;
-  if (!activeTargetEvent || !activeZapRequest) return;
+  if (!activeTarget || !activeZapRequest) return;
   if (isReconnecting) return;
 
   console.log('[Fortune Slip] Reconnecting zap monitoring');
@@ -181,7 +182,7 @@ function reconnectMonitoring() {
   }
 
   zapSubscription = subscribeToZapReceipts(
-    activeTargetEvent.id,
+    activeTarget,
     activeZapRequest,
     onZapDetected,
     300000,
@@ -304,8 +305,10 @@ async function startFortuneDraw() {
 
     // 2. zap ターゲットと LNURL エンドポイントを決定
     //    kind 0 モード: 取得済みの実 kind 0 を使用（NIP-57 完全準拠）
-    //    通常モード: 従来の ephemeral kind 1 + 擬似 metadata
+    //      検知は #p フィルタで行う (LN サービスが kind 0 の e タグを伝搬しないケースに備える)
+    //    通常モード: 従来の ephemeral kind 1 + 擬似 metadata。検知は #e フィルタ
     let targetEvent: NostrEvent;
+    let target: ZapTarget;
     let zapUrl: string | null;
 
     if (useKind0) {
@@ -315,11 +318,13 @@ async function startFortuneDraw() {
         return;
       }
       targetEvent = kind0;
+      target = { type: 'profile', pubkey: kind0.pubkey };
       zapUrl = await nip57.getZapEndpoint(kind0);
     } else {
       const textEvent = createTextEvent(privateKeyBytes, '');
       const metadataEvent = createMetadataEvent(textEvent.pubkey, lightningAddress);
       targetEvent = textEvent;
+      target = { type: 'event', eventId: textEvent.id };
       zapUrl = await nip57.getZapEndpoint(metadataEvent);
     }
 
@@ -354,13 +359,13 @@ async function startFortuneDraw() {
     qrCodeDataUrl = await generateLightningQRCode(invoice.pr);
 
     // Retain parameters to allow reconnection if the WebSocket drops
-    activeTargetEvent = targetEvent;
+    activeTarget = target;
     activeZapRequest = zapRequest;
     activePaymentId = paymentId;
 
     // 7. Zap検知を開始
     zapSubscription = subscribeToZapReceipts(
-      targetEvent.id,
+      target,
       zapRequest,
       onZapDetected,
       300000, // 5分タイムアウト

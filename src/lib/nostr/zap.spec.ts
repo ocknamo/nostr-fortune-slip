@@ -5,7 +5,7 @@ import {
   validateZapReceiptWithCoinos,
   subscribeToZapReceipts,
 } from './zap.js';
-import type { NostrEvent } from './types.js';
+import type { NostrEvent, ZapTarget } from './types.js';
 import { SimplePool } from 'nostr-tools';
 
 // Mock fetch globally
@@ -154,12 +154,15 @@ describe('validateZapReceipt', () => {
     sig: 'receipt-sig',
   });
 
+  const eventTarget = (eventId: string): ZapTarget => ({ type: 'event', eventId });
+  const profileTarget = (pubkey: string): ZapTarget => ({ type: 'profile', pubkey });
+
   it('should validate correct zap receipt', () => {
     const targetEventId = 'target-event-id';
     const zapRequest = createMockZapRequest();
     const zapReceipt = createMockZapReceipt(targetEventId, zapRequest.id);
 
-    const result = validateZapReceipt(zapReceipt, targetEventId, zapRequest);
+    const result = validateZapReceipt(zapReceipt, eventTarget(targetEventId), zapRequest);
 
     expect(result).toBe(true);
   });
@@ -170,7 +173,7 @@ describe('validateZapReceipt', () => {
     const zapReceipt = { ...createMockZapReceipt(targetEventId, zapRequest.id), kind: 1 };
 
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const result = validateZapReceipt(zapReceipt, targetEventId, zapRequest);
+    const result = validateZapReceipt(zapReceipt, eventTarget(targetEventId), zapRequest);
 
     expect(result).toBe(false);
     expect(consoleSpy).toHaveBeenCalledWith('Invalid zap receipt kind:', 1);
@@ -185,7 +188,7 @@ describe('validateZapReceipt', () => {
     zapReceipt.tags = zapReceipt.tags.filter((tag) => tag[0] !== 'bolt11');
 
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const result = validateZapReceipt(zapReceipt, targetEventId, zapRequest);
+    const result = validateZapReceipt(zapReceipt, eventTarget(targetEventId), zapRequest);
 
     expect(result).toBe(false);
     expect(consoleSpy).toHaveBeenCalledWith('Missing required tags in zap receipt');
@@ -199,7 +202,7 @@ describe('validateZapReceipt', () => {
     const zapReceipt = createMockZapReceipt('wrong-event-id', zapRequest.id);
 
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const result = validateZapReceipt(zapReceipt, targetEventId, zapRequest);
+    const result = validateZapReceipt(zapReceipt, eventTarget(targetEventId), zapRequest);
 
     expect(result).toBe(false);
     expect(consoleSpy).toHaveBeenCalledWith(
@@ -217,7 +220,7 @@ describe('validateZapReceipt', () => {
     const zapRequest = createMockZapRequest('zap-request-id');
     const zapReceipt = createMockZapReceipt(targetEventId, zapRequest.id);
 
-    const result = validateZapReceipt(zapReceipt, targetEventId, zapRequest);
+    const result = validateZapReceipt(zapReceipt, eventTarget(targetEventId), zapRequest);
 
     expect(result).toBe(true);
   });
@@ -228,7 +231,7 @@ describe('validateZapReceipt', () => {
     const zapReceipt = createMockZapReceipt(targetEventId, 'different-zap-request-id');
 
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const result = validateZapReceipt(zapReceipt, targetEventId, zapRequest);
+    const result = validateZapReceipt(zapReceipt, eventTarget(targetEventId), zapRequest);
 
     expect(result).toBe(false);
     expect(consoleSpy).toHaveBeenCalledWith('Zap receipt description ID mismatch');
@@ -244,12 +247,93 @@ describe('validateZapReceipt', () => {
     zapReceipt.tags = zapReceipt.tags.map((tag) => (tag[0] === 'description' ? ['description', 'invalid json'] : tag));
 
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const result = validateZapReceipt(zapReceipt, targetEventId, zapRequest);
+    const result = validateZapReceipt(zapReceipt, eventTarget(targetEventId), zapRequest);
 
     expect(result).toBe(false);
     expect(consoleSpy).toHaveBeenCalledWith('Invalid zap receipt description JSON:', expect.any(Error));
 
     consoleSpy.mockRestore();
+  });
+
+  describe('profile target', () => {
+    const recipientPubkey = 'recipient-pubkey';
+
+    const createProfileZapReceipt = (pubkey: string, zapRequestId: string, extraTags: string[][] = []): NostrEvent => ({
+      id: 'zap-receipt-id',
+      pubkey: 'lightning-service-pubkey',
+      created_at: Math.floor(Date.now() / 1000),
+      kind: 9735,
+      tags: [
+        ['bolt11', 'lnbc1000n1...'],
+        ['description', JSON.stringify({ id: zapRequestId })],
+        ['p', pubkey],
+        ...extraTags,
+      ],
+      content: '',
+      sig: 'receipt-sig',
+    });
+
+    it('should accept receipt with matching p tag and no e tag', () => {
+      const zapRequest = createMockZapRequest();
+      const zapReceipt = createProfileZapReceipt(recipientPubkey, zapRequest.id);
+
+      const result = validateZapReceipt(zapReceipt, profileTarget(recipientPubkey), zapRequest);
+
+      expect(result).toBe(true);
+    });
+
+    it('should accept receipt with matching p tag even when an unrelated e tag is present', () => {
+      const zapRequest = createMockZapRequest();
+      const zapReceipt = createProfileZapReceipt(recipientPubkey, zapRequest.id, [['e', 'some-other-event-id']]);
+
+      const result = validateZapReceipt(zapReceipt, profileTarget(recipientPubkey), zapRequest);
+
+      expect(result).toBe(true);
+    });
+
+    it('should reject receipt with missing p tag', () => {
+      const zapRequest = createMockZapRequest();
+      const zapReceipt: NostrEvent = {
+        id: 'zap-receipt-id',
+        pubkey: 'lightning-service-pubkey',
+        created_at: Math.floor(Date.now() / 1000),
+        kind: 9735,
+        tags: [
+          ['bolt11', 'lnbc1000n1...'],
+          ['description', JSON.stringify({ id: zapRequest.id })],
+        ],
+        content: '',
+        sig: 'receipt-sig',
+      };
+
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const result = validateZapReceipt(zapReceipt, profileTarget(recipientPubkey), zapRequest);
+
+      expect(result).toBe(false);
+      consoleSpy.mockRestore();
+    });
+
+    it('should reject receipt with mismatched p tag', () => {
+      const zapRequest = createMockZapRequest();
+      const zapReceipt = createProfileZapReceipt('different-pubkey', zapRequest.id);
+
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const result = validateZapReceipt(zapReceipt, profileTarget(recipientPubkey), zapRequest);
+
+      expect(result).toBe(false);
+      consoleSpy.mockRestore();
+    });
+
+    it('should reject receipt with mismatched description id', () => {
+      const zapRequest = createMockZapRequest('zap-request-id');
+      const zapReceipt = createProfileZapReceipt(recipientPubkey, 'different-zap-request-id');
+
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const result = validateZapReceipt(zapReceipt, profileTarget(recipientPubkey), zapRequest);
+
+      expect(result).toBe(false);
+      consoleSpy.mockRestore();
+    });
   });
 });
 
@@ -283,6 +367,8 @@ describe('validateZapReceiptWithCoinos', () => {
     sig: 'receipt-sig',
   });
 
+  const eventTarget = (eventId: string): ZapTarget => ({ type: 'event', eventId });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -312,7 +398,12 @@ describe('validateZapReceiptWithCoinos', () => {
       },
     });
 
-    const result = await validateZapReceiptWithCoinos(zapReceipt, targetEventId, zapRequest, 'test-api-token');
+    const result = await validateZapReceiptWithCoinos(
+      zapReceipt,
+      eventTarget(targetEventId),
+      zapRequest,
+      'test-api-token',
+    );
 
     expect(result.valid).toBe(true);
     expect(result.coinosVerified).toBe(true);
@@ -326,7 +417,7 @@ describe('validateZapReceiptWithCoinos', () => {
 
     const result = await validateZapReceiptWithCoinos(
       zapReceipt,
-      targetEventId,
+      eventTarget(targetEventId),
       zapRequest,
       undefined, // No API token
     );
@@ -343,7 +434,7 @@ describe('validateZapReceiptWithCoinos', () => {
 
     const result = await validateZapReceiptWithCoinos(
       zapReceipt,
-      targetEventId,
+      eventTarget(targetEventId),
       zapRequest,
       '   ', // Empty/whitespace API token
     );
@@ -358,7 +449,12 @@ describe('validateZapReceiptWithCoinos', () => {
     const zapRequest = createMockZapRequest();
     const zapReceipt = { ...createMockZapReceipt(targetEventId, zapRequest.id), kind: 1 }; // Invalid kind
 
-    const result = await validateZapReceiptWithCoinos(zapReceipt, targetEventId, zapRequest, 'test-api-token');
+    const result = await validateZapReceiptWithCoinos(
+      zapReceipt,
+      eventTarget(targetEventId),
+      zapRequest,
+      'test-api-token',
+    );
 
     expect(result.valid).toBe(false);
     expect(result.error).toBe('Basic zap receipt validation failed');
@@ -375,7 +471,12 @@ describe('validateZapReceiptWithCoinos', () => {
       error: 'No matching payment found in Coinos API',
     });
 
-    const result = await validateZapReceiptWithCoinos(zapReceipt, targetEventId, zapRequest, 'test-api-token');
+    const result = await validateZapReceiptWithCoinos(
+      zapReceipt,
+      eventTarget(targetEventId),
+      zapRequest,
+      'test-api-token',
+    );
 
     expect(result.valid).toBe(false);
     expect(result.coinosVerified).toBe(false);
@@ -390,7 +491,12 @@ describe('validateZapReceiptWithCoinos', () => {
 
     mockVerifyCoinosPayment.mockRejectedValueOnce(new Error('Network error'));
 
-    const result = await validateZapReceiptWithCoinos(zapReceipt, targetEventId, zapRequest, 'test-api-token');
+    const result = await validateZapReceiptWithCoinos(
+      zapReceipt,
+      eventTarget(targetEventId),
+      zapRequest,
+      'test-api-token',
+    );
 
     expect(result.valid).toBe(false);
     expect(result.error).toContain('Verification error: Network error');
@@ -414,17 +520,20 @@ describe('subscribeToZapReceipts', () => {
     vi.useRealTimers();
   });
 
-  it('should create subscription with correct parameters', () => {
+  const baseZapRequest = (): NostrEvent => ({
+    id: 'zap-request-id',
+    pubkey: 'zap-pubkey',
+    created_at: Math.floor(Date.now() / 1000),
+    kind: 9734,
+    tags: [],
+    content: '',
+    sig: 'zap-sig',
+  });
+
+  it('should create subscription with correct parameters for event target', () => {
     const targetEventId = 'target-event-id';
-    const zapRequest: NostrEvent = {
-      id: 'zap-request-id',
-      pubkey: 'zap-pubkey',
-      created_at: Math.floor(Date.now() / 1000),
-      kind: 9734,
-      tags: [],
-      content: '',
-      sig: 'zap-sig',
-    };
+    const target: ZapTarget = { type: 'event', eventId: targetEventId };
+    const zapRequest = baseZapRequest();
     const onZapReceived = vi.fn();
 
     const mockSubscription = {
@@ -432,7 +541,7 @@ describe('subscribeToZapReceipts', () => {
     };
     mockPoolInstance.subscribeMany.mockReturnValue(mockSubscription);
 
-    const subscription = subscribeToZapReceipts(targetEventId, zapRequest, onZapReceived);
+    const subscription = subscribeToZapReceipts(target, zapRequest, onZapReceived);
 
     expect(mockPoolInstance.subscribeMany).toHaveBeenCalledWith(
       expect.any(Array), // relays
@@ -448,22 +557,47 @@ describe('subscribeToZapReceipts', () => {
       }),
     );
 
-    expect(subscription.eventId).toBe(targetEventId);
+    const filterArg = mockPoolInstance.subscribeMany.mock.calls[0][1];
+    expect(filterArg).not.toHaveProperty('#p');
+
+    expect(subscription.target).toEqual(target);
     expect(subscription.onZapReceived).toBe(onZapReceived);
     expect(typeof subscription.stop).toBe('function');
   });
 
+  it('should create subscription using #p filter for profile target', () => {
+    const recipientPubkey = 'recipient-pubkey';
+    const target: ZapTarget = { type: 'profile', pubkey: recipientPubkey };
+    const zapRequest = baseZapRequest();
+    const onZapReceived = vi.fn();
+
+    const mockSubscription = {
+      close: vi.fn(),
+    };
+    mockPoolInstance.subscribeMany.mockReturnValue(mockSubscription);
+
+    const subscription = subscribeToZapReceipts(target, zapRequest, onZapReceived);
+
+    expect(mockPoolInstance.subscribeMany).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({
+        kinds: [9735],
+        '#p': [recipientPubkey],
+        since: expect.any(Number),
+      }),
+      expect.any(Object),
+    );
+
+    const filterArg = mockPoolInstance.subscribeMany.mock.calls[0][1];
+    expect(filterArg).not.toHaveProperty('#e');
+
+    expect(subscription.target).toEqual(target);
+  });
+
   it('should handle timeout correctly', () => {
     const targetEventId = 'target-event-id';
-    const zapRequest: NostrEvent = {
-      id: 'zap-request-id',
-      pubkey: 'zap-pubkey',
-      created_at: Math.floor(Date.now() / 1000),
-      kind: 9734,
-      tags: [],
-      content: '',
-      sig: 'zap-sig',
-    };
+    const target: ZapTarget = { type: 'event', eventId: targetEventId };
+    const zapRequest = baseZapRequest();
     const onZapReceived = vi.fn();
 
     const mockSubscription = {
@@ -473,12 +607,12 @@ describe('subscribeToZapReceipts', () => {
 
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    subscribeToZapReceipts(targetEventId, zapRequest, onZapReceived, 5000);
+    subscribeToZapReceipts(target, zapRequest, onZapReceived, 5000);
 
     // Fast forward time to trigger timeout
     vi.advanceTimersByTime(5000);
 
-    expect(consoleSpy).toHaveBeenCalledWith(`[Zap Monitor] Subscription timeout for event: ${targetEventId}`);
+    expect(consoleSpy).toHaveBeenCalledWith(`[Zap Monitor] Subscription timeout for target: event:${targetEventId}`);
     expect(mockSubscription.close).toHaveBeenCalled();
     expect(mockPoolInstance.close).toHaveBeenCalled();
 
@@ -487,15 +621,8 @@ describe('subscribeToZapReceipts', () => {
 
   it('should stop subscription correctly', () => {
     const targetEventId = 'target-event-id';
-    const zapRequest: NostrEvent = {
-      id: 'zap-request-id',
-      pubkey: 'zap-pubkey',
-      created_at: Math.floor(Date.now() / 1000),
-      kind: 9734,
-      tags: [],
-      content: '',
-      sig: 'zap-sig',
-    };
+    const target: ZapTarget = { type: 'event', eventId: targetEventId };
+    const zapRequest = baseZapRequest();
     const onZapReceived = vi.fn();
 
     const mockSubscription = {
@@ -505,11 +632,11 @@ describe('subscribeToZapReceipts', () => {
 
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    const subscription = subscribeToZapReceipts(targetEventId, zapRequest, onZapReceived);
+    const subscription = subscribeToZapReceipts(target, zapRequest, onZapReceived);
 
     subscription.stop();
 
-    expect(consoleSpy).toHaveBeenCalledWith(`[Zap Monitor] Stopping subscription for event: ${targetEventId}`);
+    expect(consoleSpy).toHaveBeenCalledWith(`[Zap Monitor] Stopping subscription for target: event:${targetEventId}`);
     expect(mockSubscription.close).toHaveBeenCalled();
 
     // Fast forward time to check pool cleanup
