@@ -20,6 +20,7 @@ import {
 import { generateLightningQRCode, generateQRCode } from '$lib/qrcode';
 import { generateSecretKey, nip57 } from 'nostr-tools';
 import { startCoinosPolling, type CoinosPollingSubscription } from '$lib/coinos';
+import { getCachedKind0 } from '$lib/nostr/profile.js';
 
 import backgroundImage from '$lib/assets/background.jpg';
 
@@ -54,6 +55,7 @@ let hideOmikujiMessage = false; // 紙のおみくじを促すメッセージ・
 let nostrQrCodeDataUrl = ''; // Nostr 紹介サイトへの QR コード
 let testMode = false; // zapを介さずに直接くじを引くテストモード
 let animationStyle: 'normal' | 'flashy' = 'normal'; // 演出スタイル
+let useKind0 = false; // kind 0 を zap ターゲットとして使用する
 let isLightningPlaying = false; // 派手モード時の稲妻演出再生中フラグ
 
 // 派手モード専用の重い演出コンポーネントは初回必要時に動的に取得する。
@@ -89,6 +91,7 @@ onMount(() => {
     testMode = localStorage.getItem('testMode') === 'true';
     const storedAnimationStyle = localStorage.getItem('animationStyle');
     animationStyle = storedAnimationStyle === 'flashy' ? 'flashy' : 'normal';
+    useKind0 = localStorage.getItem('useKind0') === 'true';
 
     generateQRCode(NOSTR_INTRO_URL)
       .then((url) => {
@@ -227,51 +230,63 @@ async function startFortuneDraw() {
   isLoading = true;
 
   try {
-    // 1. ドロー毎に使い捨ての Nostr 秘密鍵を生成
+    // 1. ドロー毎に使い捨ての Nostr 秘密鍵を生成（zap request の署名用）
     const privateKeyBytes = generateSecretKey();
 
-    // 2. Nostr kind 1イベントを作成・送信
-    const textEvent = createTextEvent(privateKeyBytes, '');
+    // 2. zap ターゲットと LNURL エンドポイントを決定
+    //    kind 0 モード: 取得済みの実 kind 0 を使用（NIP-57 完全準拠）
+    //    通常モード: 従来の ephemeral kind 1 + 擬似 metadata
+    let targetEvent: NostrEvent;
+    let zapUrl: string | null;
 
-    // 3. recipientのmetadata eventを作成（簡易版）
-    // 入金先は lightningAddress で決まるため、recipientPubkey は
-    // ephemeral 鍵から導出した形式上のものでよい
-    const recipientPubkey = textEvent.pubkey;
-    const metadataEvent = createMetadataEvent(recipientPubkey, lightningAddress);
+    if (useKind0) {
+      const kind0 = getCachedKind0();
+      if (!kind0) {
+        errorMessage = 'kind 0 が見つかりません。設定画面でプロフィールを再取得してください。';
+        return;
+      }
+      targetEvent = kind0;
+      zapUrl = await nip57.getZapEndpoint(kind0);
+    } else {
+      const textEvent = createTextEvent(privateKeyBytes, '');
+      const metadataEvent = createMetadataEvent(textEvent.pubkey, lightningAddress);
+      targetEvent = textEvent;
+      zapUrl = await nip57.getZapEndpoint(metadataEvent);
+    }
 
-    // 4. zapUrl取得
-    const zapUrl = await nip57.getZapEndpoint(metadataEvent);
     if (zapUrl === null) {
-      errorMessage = `Zapエンドポイントが見つかりません。ライトニングアドレス: ${lightningAddress}`;
-      throw new Error(`Zapエンドポイントが見つかりません。ライトニングアドレス: ${lightningAddress}`);
+      errorMessage = useKind0
+        ? 'プロフィールに Lightning Address が設定されていません。設定画面で Nostr pubkey を確認してください。'
+        : `Zapエンドポイントが見つかりません。ライトニングアドレス: ${lightningAddress}`;
+      throw new Error(errorMessage);
     }
 
     console.debug('[zap endpoint]', zapUrl);
 
-    // 5. ランダムな8byte値を生成
+    // 3. ランダムな8byte値を生成（ドロー単位の識別用）
     const paymentId = generateRandomBase64();
     console.log('[Fortune Slip] Generated payment ID:', paymentId);
 
     // 1 sat = 1000 millisats
     const satsAmount = zapAmount * 1000;
 
-    // 6. Zapリクエストを作成（ランダム値をcommentに埋め込む）
+    // 4. Zapリクエストを作成（ランダム値をcommentに埋め込む）
     const zapRequest = createZapRequest(
       privateKeyBytes,
-      textEvent, // 完全なeventオブジェクト
+      targetEvent,
       satsAmount,
       paymentId, // 識別用IDを埋め込む
     );
 
-    // 6. Zapインボイスを取得
+    // 5. Zapインボイスを取得
     const invoice = await getZapInvoiceFromEndpoint(zapUrl, satsAmount, zapRequest);
 
-    // 7. QRコードを生成
+    // 6. QRコードを生成
     qrCodeDataUrl = await generateLightningQRCode(invoice.pr);
 
-    // 9. Zap検知を開始
+    // 7. Zap検知を開始
     zapSubscription = subscribeToZapReceipts(
-      textEvent.id,
+      targetEvent.id,
       zapRequest,
       onZapDetected,
       300000, // 5分タイムアウト
