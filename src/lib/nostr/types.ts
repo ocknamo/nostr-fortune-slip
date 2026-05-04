@@ -24,12 +24,20 @@ export interface MetadataContent {
 }
 
 /**
+ * Zap 検知ターゲット
+ * - event: 通常モード (ephemeral kind 1) — `e` タグでフィルタ
+ * - profile: useKind0 モード — `p` タグでフィルタ (NIP-57 Appendix E に準拠し、
+ *   LN サービスが `e` タグを伝搬しなくても確実に検知するため)
+ */
+export type ZapTarget = { type: 'event'; eventId: string } | { type: 'profile'; pubkey: string };
+
+/**
  * Zap Receipt検知用のサブスクリプション管理
  */
 export interface ZapReceiptSubscription {
   pool: any;
   subscriptionId: string;
-  eventId: string;
+  target: ZapTarget;
   onZapReceived: (zapReceipt: NostrEvent) => void;
   stop: () => void;
 }

@@ -1,5 +1,5 @@
 // 型定義をエクスポート
-export type { NostrEvent, MetadataContent, ZapReceiptSubscription } from './types.js';
+export type { NostrEvent, MetadataContent, ZapReceiptSubscription, ZapTarget } from './types.js';
 
 // イベント作成関連をエクスポート
 export { createTextEvent, createZapRequest, createMetadataEvent } from './events.js';
