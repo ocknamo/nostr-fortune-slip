@@ -40,6 +40,13 @@ let isAnimationPlaying = false;
 let zapSubscription: ZapReceiptSubscription | null = null;
 let coinosPollingSubscription: CoinosPollingSubscription | null = null;
 
+// Reconnect parameters retained to allow re-subscription when the WebSocket
+// drops (e.g. browsers suspending background tabs)
+let activeTargetEvent: NostrEvent | null = null;
+let activeZapRequest: NostrEvent | null = null;
+let activePaymentId: string | null = null;
+let isReconnecting = false;
+
 // 自動リセット用タイマー
 let autoResetTimerId: number | null = null;
 
@@ -64,9 +71,19 @@ let isLightningPlaying = false; // 派手モード時の稲妻演出再生中フ
 type LightningRevealProps = { text: string; showConfetti?: boolean; onComplete?: () => void };
 let LightningReveal: Component<LightningRevealProps> | null = null;
 
+// バックグラウンドタブから戻ったときに WebSocket が切れていることがあるため、
+// 表示状態に戻ったら自動で再接続を試みる
+function handleVisibilityChange() {
+  if (typeof document === 'undefined') return;
+  if (document.visibilityState !== 'visible') return;
+  if (!isWaitingForZap || zapDetected) return;
+  reconnectMonitoring();
+}
+
 // 設定データを読み込み
 onMount(() => {
   if (typeof window !== 'undefined') {
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     // 旧バージョンで保存された秘密鍵が残っていたら削除（マイグレーション）
     localStorage.removeItem('nostrPrivateKey');
 
@@ -105,6 +122,9 @@ onMount(() => {
 
 // コンポーネント破棄時のクリーンアップ
 onDestroy(() => {
+  if (typeof document !== 'undefined') {
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }
   if (zapSubscription) {
     zapSubscription.stop();
   }
@@ -134,6 +154,55 @@ function stopZapMonitoring() {
     coinosPollingSubscription = null;
   }
   isWaitingForZap = false;
+  activeTargetEvent = null;
+  activeZapRequest = null;
+  activePaymentId = null;
+  isReconnecting = false;
+}
+
+// Re-establishes Zap Receipt subscription and Coinos polling using the
+// parameters retained from the active draw. Called automatically when the
+// tab becomes visible again, or manually via the reconnect button.
+function reconnectMonitoring() {
+  if (zapDetected) return;
+  if (!activeTargetEvent || !activeZapRequest) return;
+  if (isReconnecting) return;
+
+  console.log('[Fortune Slip] Reconnecting zap monitoring');
+  isReconnecting = true;
+
+  if (zapSubscription) {
+    zapSubscription.stop();
+    zapSubscription = null;
+  }
+  if (coinosPollingSubscription) {
+    coinosPollingSubscription.stop();
+    coinosPollingSubscription = null;
+  }
+
+  zapSubscription = subscribeToZapReceipts(
+    activeTargetEvent.id,
+    activeZapRequest,
+    onZapDetected,
+    300000,
+    coinosApiToken,
+    onZapError,
+  );
+
+  if (coinosApiToken.trim() && activePaymentId) {
+    coinosPollingSubscription = startCoinosPolling(
+      activePaymentId,
+      coinosApiToken,
+      onCoinosPaymentDetected,
+      10000,
+      300000,
+    );
+  }
+
+  // Brief debounce so rapid visibility toggles don't spam reconnects
+  setTimeout(() => {
+    isReconnecting = false;
+  }, 1500);
 }
 
 async function onZapDetected(zapReceipt: NostrEvent) {
@@ -284,6 +353,11 @@ async function startFortuneDraw() {
     // 6. QRコードを生成
     qrCodeDataUrl = await generateLightningQRCode(invoice.pr);
 
+    // Retain parameters to allow reconnection if the WebSocket drops
+    activeTargetEvent = targetEvent;
+    activeZapRequest = zapRequest;
+    activePaymentId = paymentId;
+
     // 7. Zap検知を開始
     zapSubscription = subscribeToZapReceipts(
       targetEvent.id,
@@ -415,14 +489,27 @@ function handleLightningComplete() {
               </div>
             </div>
             
-            <!-- キャンセルボタン -->
+            <!-- 再接続・キャンセルボタン -->
             {#if isWaitingForZap}
-              <button
-                on:click={resetFortuneSlip}
-                class="font-medium py-2 px-4 transition-colors mt-4 border rounded-4xl"
-              >
-                Cancel
-              </button>
+              <div class="flex gap-2 justify-center mt-4">
+                <button
+                  on:click={reconnectMonitoring}
+                  disabled={isReconnecting}
+                  class="font-medium py-2 px-4 transition-colors border rounded-4xl disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="WebSocket が切れた場合に再接続します"
+                >
+                  {isReconnecting ? 'Reconnecting...' : 'Reconnect'}
+                </button>
+                <button
+                  on:click={resetFortuneSlip}
+                  class="font-medium py-2 px-4 transition-colors border rounded-4xl"
+                >
+                  Cancel
+                </button>
+              </div>
+              <p class="text-xs text-gray-500 mt-2">
+                ブラウザを切り替えて支払い検知が止まった場合は Reconnect を押してください。
+              </p>
             {/if}
           </div>
         {/if}
