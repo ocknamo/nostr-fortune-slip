@@ -218,6 +218,18 @@ function onNostrPubkeyInput() {
   }
 }
 
+// useKind0 が無効な状態でライトニングアドレスを直接編集した場合は、
+// kind 0 由来の値と齟齬が出ないように Nostr 連携情報をクリアする
+function onLightningAddressInput() {
+  if (useKind0) return;
+  if (!nostrPubkey && kind0FetchStatus === 'idle') return;
+  nostrPubkey = '';
+  clearCachedKind0();
+  kind0FetchStatus = 'idle';
+  kind0DisplayName = '';
+  kind0FetchedAt = null;
+}
+
 function applyLud16() {
   lightningAddress = suggestedLud16;
   showLud16Dialog = false;
@@ -374,10 +386,17 @@ function handleClearData() {
             id="lightning-address"
             type="email"
             bind:value={lightningAddress}
+            on:input={onLightningAddressInput}
+            disabled={useKind0}
             placeholder="user@domain.com"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
             class:border-red-500={errors.lightningAddress}
           />
+          {#if useKind0}
+            <p class="mt-1 text-sm text-gray-500">
+              kind 0 から取得した Lightning Address を使用中のため編集できません。変更したい場合は下部の「kind 0 を zap ターゲットとして使用する」をオフにしてください。
+            </p>
+          {/if}
           {#if errors.lightningAddress}
             <p class="mt-1 text-sm text-red-600">{errors.lightningAddress}</p>
           {/if}
