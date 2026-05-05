@@ -20,19 +20,23 @@ export function createTextEvent(privateKeyBytes: Uint8Array, content: string, ta
 
 /**
  * Zap Request イベント（kind 9734）を作成 (nostr-toolsのnip57.makeZapRequestを使用)
+ *
+ * recipientPubkey を指定するとプロフィール zap モードになり、
+ * `nip57.makeZapRequest` を `pubkey:` 引数で呼ぶ。これにより request の
+ * tags は p のみ (NIP-57 Appendix E 準拠) となり、kind 0 を指す e/k/a タグが
+ * 付かなくなる。指定しない場合は従来どおり `event:` で呼ぶ event zap。
  */
 export function createZapRequest(
   privateKeyBytes: Uint8Array,
   targetEvent: NostrEvent,
   amount?: number,
   comment?: string,
+  recipientPubkey?: string,
 ): NostrEvent {
-  const zapRequestTemplate = nip57.makeZapRequest({
-    event: targetEvent,
-    amount: amount || 1000,
-    comment: comment || '',
-    relays: RELAYS,
-  });
+  const params = recipientPubkey
+    ? { pubkey: recipientPubkey, amount: amount ?? 1000, comment: comment ?? '', relays: RELAYS }
+    : { event: targetEvent, amount: amount ?? 1000, comment: comment ?? '', relays: RELAYS };
+  const zapRequestTemplate = nip57.makeZapRequest(params);
 
   // テンプレートに署名してEventに変換
   const signedEvent = finalizeEvent(zapRequestTemplate, privateKeyBytes);

@@ -345,11 +345,16 @@ async function startFortuneDraw() {
     const satsAmount = zapAmount * 1000;
 
     // 4. Zapリクエストを作成（ランダム値をcommentに埋め込む）
+    //    kind 0 モードでは pubkey: を渡してプロフィール zap (p タグのみ) として
+    //    組み立てる。event: で渡すと nostr-tools が kind 0 を指す e/k/a タグを
+    //    付加し、LN サービスや他クライアントが「kind 0 への zap」として
+    //    扱えなくなるため。
     const zapRequest = createZapRequest(
       privateKeyBytes,
       targetEvent,
       satsAmount,
       paymentId, // 識別用IDを埋め込む
+      useKind0 ? targetEvent.pubkey : undefined,
     );
 
     // 5. Zapインボイスを取得
