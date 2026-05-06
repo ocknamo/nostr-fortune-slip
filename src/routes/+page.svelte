@@ -570,7 +570,7 @@ function handleLightningComplete() {
       {/if}
 
       <!-- Zap検知後のランダム数字表示 -->
-      {#if zapDetected && !isAnimationPlaying}
+      {#if zapDetected && !isAnimationPlaying && !isLightningPlaying}
       <div class="mb-6 bg-white pl-4 pr-4 {hideOmikujiMessage ? 'w-64' : 'w-50'}">
         <div class="flex flex-col justify-center mb-4 border-b pb-4">
           {#if !hideOmikujiMessage}
