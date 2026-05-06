@@ -13,11 +13,7 @@ import {
   getDisplayNameFromKind0,
   getKind0FetchedAt,
 } from '$lib/nostr/profile.js';
-import {
-  DEFAULT_FORTUNE_TEXTS_CSV,
-  DEFAULT_NO_CONFETTI_TEXTS_CSV,
-  isValidRelayUrl,
-} from '$lib/defaults.js';
+import { DEFAULT_FORTUNE_TEXTS_CSV, DEFAULT_NO_CONFETTI_TEXTS_CSV, isValidRelayUrl } from '$lib/defaults.js';
 
 // フォームデータ
 let lightningAddress = '';

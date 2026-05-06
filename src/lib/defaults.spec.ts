@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  DEFAULT_FORTUNE_TEXTS_CSV,
-  DEFAULT_NO_CONFETTI_TEXTS_CSV,
-  isValidRelayUrl,
-  parseCsv,
-} from './defaults.js';
+import { DEFAULT_FORTUNE_TEXTS_CSV, DEFAULT_NO_CONFETTI_TEXTS_CSV, isValidRelayUrl, parseCsv } from './defaults.js';
 
 describe('parseCsv', () => {
   it('returns trimmed non-empty entries from a CSV string', () => {

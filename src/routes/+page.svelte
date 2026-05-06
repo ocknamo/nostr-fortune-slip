@@ -22,11 +22,7 @@ import { generateLightningQRCode, generateQRCode } from '$lib/qrcode';
 import { generateSecretKey, nip57 } from 'nostr-tools';
 import { startCoinosPolling, type CoinosPollingSubscription } from '$lib/coinos';
 import { getCachedKind0 } from '$lib/nostr/profile.js';
-import {
-  DEFAULT_FORTUNE_TEXTS_CSV,
-  DEFAULT_NO_CONFETTI_TEXTS_CSV,
-  parseCsv,
-} from '$lib/defaults.js';
+import { DEFAULT_FORTUNE_TEXTS_CSV, DEFAULT_NO_CONFETTI_TEXTS_CSV, parseCsv } from '$lib/defaults.js';
 
 import backgroundImage from '$lib/assets/background.jpg';
 
