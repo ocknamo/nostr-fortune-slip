@@ -16,6 +16,7 @@ import {
 import {
   DEFAULT_FORTUNE_TEXTS_CSV,
   DEFAULT_NO_CONFETTI_TEXTS_CSV,
+  isValidRelayUrl,
 } from '$lib/defaults.js';
 
 // フォームデータ
@@ -29,6 +30,7 @@ let fortuneMin = 1; // くじの最小値
 let fortuneMax = 20; // くじの最大値
 let fortuneTexts = ''; // くじの内容（カンマ区切り）
 let noConfettiTexts = ''; // 紙吹雪を出さないテキスト（カンマ区切り）
+let relays = ''; // Nostr リレー一覧（改行区切りの wss:// URL）
 let hideOmikujiMessage = false; // 紙のおみくじを促すメッセージと番号を非表示にする
 let testMode = false; // zapを介さずにくじを引けるテストモード
 let animationStyle: 'normal' | 'flashy' = 'normal'; // 演出スタイル
@@ -85,6 +87,7 @@ onMount(() => {
     fortuneMax = storedFortuneMax ? parseInt(storedFortuneMax, 10) : 20;
     fortuneTexts = localStorage.getItem('fortuneTexts') ?? DEFAULT_FORTUNE_TEXTS_CSV;
     noConfettiTexts = localStorage.getItem('noConfettiTexts') ?? DEFAULT_NO_CONFETTI_TEXTS_CSV;
+    relays = localStorage.getItem('relays') ?? '';
     hideOmikujiMessage = localStorage.getItem('hideOmikujiMessage') === 'true';
     testMode = localStorage.getItem('testMode') === 'true';
     const storedAnimationStyle = localStorage.getItem('animationStyle');
@@ -141,6 +144,18 @@ function validateForm(): boolean {
     errors.fortuneMax = '最大値は最小値より大きくしてください';
   }
 
+  // リレー URL のバリデーション（改行区切り、空欄ならデフォルトを使うので OK）
+  if (relays.trim()) {
+    const lines = relays
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
+    const invalid = lines.filter((u) => !isValidRelayUrl(u));
+    if (invalid.length > 0) {
+      errors.relays = `不正なリレー URL: ${invalid.join(', ')}（wss:// または ws:// で始まる必要があります）`;
+    }
+  }
+
   // Coinos API Token（オプショナル）はバリデーションなし
   // fortuneTexts（オプショナル）もバリデーションなし
 
@@ -158,6 +173,7 @@ function handleSave() {
     localStorage.setItem('fortuneMax', fortuneMax.toString());
     localStorage.setItem('fortuneTexts', fortuneTexts);
     localStorage.setItem('noConfettiTexts', noConfettiTexts);
+    localStorage.setItem('relays', relays);
     localStorage.setItem('hideOmikujiMessage', hideOmikujiMessage ? 'true' : 'false');
     localStorage.setItem('testMode', testMode ? 'true' : 'false');
     localStorage.setItem('animationStyle', animationStyle);
@@ -257,6 +273,7 @@ function handleClearData() {
     localStorage.removeItem('fortuneMax');
     localStorage.removeItem('fortuneTexts');
     localStorage.removeItem('noConfettiTexts');
+    localStorage.removeItem('relays');
     localStorage.removeItem('hideOmikujiMessage');
     localStorage.removeItem('testMode');
     localStorage.removeItem('animationStyle');
@@ -278,6 +295,7 @@ function handleClearData() {
     fortuneMax = 20;
     fortuneTexts = DEFAULT_FORTUNE_TEXTS_CSV;
     noConfettiTexts = DEFAULT_NO_CONFETTI_TEXTS_CSV;
+    relays = '';
     hideOmikujiMessage = false;
     testMode = false;
     animationStyle = 'normal';
@@ -714,6 +732,29 @@ function handleClearData() {
               </span>
             </label>
           </div>
+        </div>
+
+        <!-- Nostr リレー -->
+        <div class="border-t pt-6">
+          <h2 class="text-lg font-semibold text-gray-900 mb-1">Nostr リレー</h2>
+          <label for="relays" class="block text-sm font-medium text-gray-700 mb-2 mt-3">
+            リレー URL
+          </label>
+          <textarea
+            id="relays"
+            bind:value={relays}
+            placeholder={'wss://relay.damus.io/\nwss://yabu.me'}
+            rows="5"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+            class:border-red-500={errors.relays}
+          ></textarea>
+          {#if errors.relays}
+            <p class="mt-1 text-sm text-red-600">{errors.relays}</p>
+          {:else}
+            <p class="mt-1 text-sm text-gray-500">
+              1行に1つの wss:// URL。空欄の場合はデフォルトのリレーを使用します。
+            </p>
+          {/if}
         </div>
 
         <!-- 保存ボタン -->
