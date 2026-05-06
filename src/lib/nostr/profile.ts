@@ -1,7 +1,7 @@
 import { SimplePool, verifyEvent } from 'nostr-tools';
 import { nip19 } from 'nostr-tools';
 import type { NostrEvent } from './types.js';
-import { RELAYS } from './relay.js';
+import { getRelays } from './relay.js';
 
 const KIND0_CACHE_KEY = 'nostrKind0';
 const KIND0_FETCHED_AT_KEY = 'nostrKind0FetchedAt';
@@ -14,8 +14,9 @@ export function npubToHex(npub: string): string {
 
 export async function fetchKind0(pubkeyHex: string): Promise<NostrEvent | null> {
   const pool = new SimplePool();
+  const relays = getRelays();
   try {
-    const event = await pool.get(RELAYS, { kinds: [0], authors: [pubkeyHex] });
+    const event = await pool.get(relays, { kinds: [0], authors: [pubkeyHex] });
     if (!event) return null;
     // 悪意のあるリレーが偽の kind 0 を返すケースに備えて署名を検証
     if (!verifyEvent(event)) return null;
@@ -23,7 +24,7 @@ export async function fetchKind0(pubkeyHex: string): Promise<NostrEvent | null> 
     localStorage.setItem(KIND0_FETCHED_AT_KEY, Date.now().toString());
     return event as NostrEvent;
   } finally {
-    pool.close(RELAYS);
+    pool.close(relays);
   }
 }
 

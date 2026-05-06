@@ -14,7 +14,7 @@ vi.mock('nostr-tools', () => ({
   },
 }));
 
-vi.mock('./relay.js', () => ({ RELAYS: [] }));
+vi.mock('./relay.js', () => ({ RELAYS: [], DEFAULT_RELAYS: [], getRelays: () => [] }));
 
 function makeKind0(content: object): NostrEvent {
   return {

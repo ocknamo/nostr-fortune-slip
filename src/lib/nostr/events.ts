@@ -1,6 +1,6 @@
 import { nip57, finalizeEvent, type EventTemplate } from 'nostr-tools';
 import type { NostrEvent, MetadataContent } from './types.js';
-import { RELAYS } from './relay.js';
+import { getRelays } from './relay.js';
 
 /**
  * Nostr kind 1イベントを作成
@@ -33,9 +33,10 @@ export function createZapRequest(
   comment?: string,
   recipientPubkey?: string,
 ): NostrEvent {
+  const relays = getRelays();
   const params = recipientPubkey
-    ? { pubkey: recipientPubkey, amount: amount ?? 1000, comment: comment ?? '', relays: RELAYS }
-    : { event: targetEvent, amount: amount ?? 1000, comment: comment ?? '', relays: RELAYS };
+    ? { pubkey: recipientPubkey, amount: amount ?? 1000, comment: comment ?? '', relays }
+    : { event: targetEvent, amount: amount ?? 1000, comment: comment ?? '', relays };
   const zapRequestTemplate = nip57.makeZapRequest(params);
 
   // テンプレートに署名してEventに変換

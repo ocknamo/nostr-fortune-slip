@@ -22,6 +22,7 @@ import { generateLightningQRCode, generateQRCode } from '$lib/qrcode';
 import { generateSecretKey, nip57 } from 'nostr-tools';
 import { startCoinosPolling, type CoinosPollingSubscription } from '$lib/coinos';
 import { getCachedKind0 } from '$lib/nostr/profile.js';
+import { DEFAULT_FORTUNE_TEXTS_CSV, DEFAULT_NO_CONFETTI_TEXTS_CSV, parseCsv } from '$lib/defaults.js';
 
 import backgroundImage from '$lib/assets/background.jpg';
 
@@ -58,6 +59,7 @@ let zapAmount = 100; // Zap金額（sats）デフォルト値
 let fortuneMin = 1; // くじの最小値
 let fortuneMax = 20; // くじの最大値
 let fortuneTexts: string[] = []; // くじの内容配列
+let noConfettiTexts: string[] = []; // 紙吹雪を出さないテキスト
 let fortuneTextForNumber: string | null = null; // 生成された数字に対応するテキスト
 let hideOmikujiMessage = false; // 紙のおみくじを促すメッセージ・番号を隠す
 let nostrQrCodeDataUrl = ''; // Nostr 紹介サイトへの QR コード
@@ -99,12 +101,9 @@ onMount(() => {
     const storedFortuneMax = localStorage.getItem('fortuneMax');
     fortuneMax = storedFortuneMax ? parseInt(storedFortuneMax, 10) : 20;
     const storedFortuneTexts = localStorage.getItem('fortuneTexts');
-    fortuneTexts = storedFortuneTexts
-      ? storedFortuneTexts
-          .split(',')
-          .map((t) => t.trim())
-          .filter((t) => t)
-      : [];
+    fortuneTexts = parseCsv(storedFortuneTexts ?? DEFAULT_FORTUNE_TEXTS_CSV);
+    const storedNoConfettiTexts = localStorage.getItem('noConfettiTexts');
+    noConfettiTexts = parseCsv(storedNoConfettiTexts ?? DEFAULT_NO_CONFETTI_TEXTS_CSV);
     hideOmikujiMessage = localStorage.getItem('hideOmikujiMessage') === 'true';
     testMode = localStorage.getItem('testMode') === 'true';
     const storedAnimationStyle = localStorage.getItem('animationStyle');
@@ -565,12 +564,13 @@ function handleLightningComplete() {
         {@const RevealComponent = LightningReveal}
         <RevealComponent
           text={fortuneTextForNumber ?? String(randomNumber)}
+          showConfetti={!fortuneTextForNumber || !noConfettiTexts.includes(fortuneTextForNumber)}
           onComplete={handleLightningComplete}
         />
       {/if}
 
       <!-- Zap検知後のランダム数字表示 -->
-      {#if zapDetected && !isAnimationPlaying}
+      {#if zapDetected && !isAnimationPlaying && !isLightningPlaying}
       <div class="mb-6 bg-white pl-4 pr-4 {hideOmikujiMessage ? 'w-64' : 'w-50'}">
         <div class="flex flex-col justify-center mb-4 border-b pb-4">
           {#if !hideOmikujiMessage}
