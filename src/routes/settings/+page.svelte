@@ -173,7 +173,14 @@ function handleSave() {
     localStorage.setItem('fortuneMax', fortuneMax.toString());
     localStorage.setItem('fortuneTexts', fortuneTexts);
     localStorage.setItem('noConfettiTexts', noConfettiTexts);
-    localStorage.setItem('relays', relays);
+    // 保存前にリレー文字列を正規化（空白除去・空行除去）してフォームと localStorage を揃える
+    const canonicalRelays = relays
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .join('\n');
+    relays = canonicalRelays;
+    localStorage.setItem('relays', canonicalRelays);
     localStorage.setItem('hideOmikujiMessage', hideOmikujiMessage ? 'true' : 'false');
     localStorage.setItem('testMode', testMode ? 'true' : 'false');
     localStorage.setItem('animationStyle', animationStyle);
@@ -737,7 +744,10 @@ function handleClearData() {
         <!-- Nostr リレー -->
         <div class="border-t pt-6">
           <h2 class="text-lg font-semibold text-gray-900 mb-1">Nostr リレー</h2>
-          <label for="relays" class="block text-sm font-medium text-gray-700 mb-2 mt-3">
+          <p class="text-sm text-gray-500 mb-4">
+            zap 受信通知や kind 0 プロフィール取得に使用するリレーです。
+          </p>
+          <label for="relays" class="block text-sm font-medium text-gray-700 mb-2">
             リレー URL
           </label>
           <textarea
