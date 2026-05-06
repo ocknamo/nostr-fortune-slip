@@ -1,7 +1,7 @@
 import { SimplePool } from 'nostr-tools';
 import type { Event, Filter } from 'nostr-tools';
 import type { NostrEvent, ZapReceiptSubscription, ZapTarget } from './types.js';
-import { RELAYS } from './relay.js';
+import { getRelays } from './relay.js';
 import { verifyCoinosPayment } from '../coinos/index.js';
 
 function describeTarget(target: ZapTarget): string {
@@ -175,6 +175,7 @@ export function subscribeToZapReceipts(
   onZapError?: (error: string) => void, // エラーコールバック（オプション）
 ): ZapReceiptSubscription {
   const pool = new SimplePool();
+  const relays = getRelays();
   const subscriptionId = `zap-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   const targetLabel = describeTarget(target);
 
@@ -194,7 +195,7 @@ export function subscribeToZapReceipts(
 
   // サブスクリプション開始 - 正しい型を使用
   const subscription = pool.subscribeMany(
-    RELAYS,
+    relays,
     filter, // 単一のFilterオブジェクト
     {
       onevent: async (event: Event) => {
@@ -245,7 +246,7 @@ export function subscribeToZapReceipts(
   const timeoutId = setTimeout(() => {
     console.log(`[Zap Monitor] Subscription timeout for target: ${targetLabel}`);
     subscription.close();
-    pool.close(RELAYS);
+    pool.close(relays);
   }, timeoutMs);
 
   // 停止関数
@@ -255,7 +256,7 @@ export function subscribeToZapReceipts(
     subscription.close();
     // 少し待ってからプールを閉じる
     setTimeout(() => {
-      pool.close(RELAYS);
+      pool.close(relays);
     }, 1000);
   };
 

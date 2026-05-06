@@ -13,4 +13,4 @@ export { generateLuckyNumber, getFortuneText } from './fortune.js';
 // ランダム値生成をエクスポート
 export { generateRandomBase64 } from './random.js';
 
-export { RELAYS } from './relay.js';
+export { RELAYS, DEFAULT_RELAYS, getRelays } from './relay.js';
