@@ -13,6 +13,7 @@ import {
   getDisplayNameFromKind0,
   getKind0FetchedAt,
 } from '$lib/nostr/profile.js';
+import { DEFAULT_FORTUNE_TEXTS_CSV } from '$lib/defaults.js';
 
 // フォームデータ
 let lightningAddress = '';
@@ -78,7 +79,7 @@ onMount(() => {
     fortuneMin = storedFortuneMin ? parseInt(storedFortuneMin, 10) : 1;
     const storedFortuneMax = localStorage.getItem('fortuneMax');
     fortuneMax = storedFortuneMax ? parseInt(storedFortuneMax, 10) : 20;
-    fortuneTexts = localStorage.getItem('fortuneTexts') || '';
+    fortuneTexts = localStorage.getItem('fortuneTexts') ?? DEFAULT_FORTUNE_TEXTS_CSV;
     hideOmikujiMessage = localStorage.getItem('hideOmikujiMessage') === 'true';
     testMode = localStorage.getItem('testMode') === 'true';
     const storedAnimationStyle = localStorage.getItem('animationStyle');
@@ -268,7 +269,7 @@ function handleClearData() {
     pinCode = '0000'; // デフォルトPINにリセット
     fortuneMin = 1;
     fortuneMax = 20;
-    fortuneTexts = '';
+    fortuneTexts = DEFAULT_FORTUNE_TEXTS_CSV;
     hideOmikujiMessage = false;
     testMode = false;
     animationStyle = 'normal';

@@ -22,6 +22,7 @@ import { generateLightningQRCode, generateQRCode } from '$lib/qrcode';
 import { generateSecretKey, nip57 } from 'nostr-tools';
 import { startCoinosPolling, type CoinosPollingSubscription } from '$lib/coinos';
 import { getCachedKind0 } from '$lib/nostr/profile.js';
+import { DEFAULT_FORTUNE_TEXTS_CSV, parseCsv } from '$lib/defaults.js';
 
 import backgroundImage from '$lib/assets/background.jpg';
 
@@ -99,12 +100,7 @@ onMount(() => {
     const storedFortuneMax = localStorage.getItem('fortuneMax');
     fortuneMax = storedFortuneMax ? parseInt(storedFortuneMax, 10) : 20;
     const storedFortuneTexts = localStorage.getItem('fortuneTexts');
-    fortuneTexts = storedFortuneTexts
-      ? storedFortuneTexts
-          .split(',')
-          .map((t) => t.trim())
-          .filter((t) => t)
-      : [];
+    fortuneTexts = parseCsv(storedFortuneTexts ?? DEFAULT_FORTUNE_TEXTS_CSV);
     hideOmikujiMessage = localStorage.getItem('hideOmikujiMessage') === 'true';
     testMode = localStorage.getItem('testMode') === 'true';
     const storedAnimationStyle = localStorage.getItem('animationStyle');
