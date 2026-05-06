@@ -417,18 +417,22 @@ async function handleAnimationComplete() {
 
   if (animationStyle === 'flashy') {
     // 派手モード: 続けて稲妻演出を再生
+    // isAnimationPlaying=false と同期ブロック内でセットすることで Svelte がバッチ処理し、
+    // await import の間に zapDetected=true&isLightningPlaying=false の中間状態が
+    // レンダリングされて結果テキストが一瞬見える問題を防ぐ
+    isLightningPlaying = true;
     if (!LightningReveal) {
       try {
         const module = await import('$lib/components/LightningReveal.svelte');
         LightningReveal = module.default as Component<LightningRevealProps>;
       } catch (err) {
         console.warn('[Fortune Slip] Failed to load LightningReveal, falling back to normal flow:', err);
+        isLightningPlaying = false;
         zapDetected = true;
         startAutoReset();
         return;
       }
     }
-    isLightningPlaying = true;
     return;
   }
 
