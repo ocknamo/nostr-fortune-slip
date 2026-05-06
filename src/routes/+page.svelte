@@ -503,22 +503,21 @@ function handleLightningComplete() {
             {#if isWaitingForZap}
               <div class="flex gap-2 justify-center mt-4">
                 <button
-                  on:click={reconnectMonitoring}
-                  disabled={isReconnecting}
-                  class="font-medium py-2 px-4 transition-colors border rounded-4xl disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="WebSocket が切れた場合に再接続します"
-                >
-                  {isReconnecting ? 'Reconnecting...' : 'Reconnect'}
-                </button>
-                <button
                   on:click={resetFortuneSlip}
                   class="font-medium py-2 px-4 transition-colors border rounded-4xl"
                 >
                   Cancel
                 </button>
               </div>
-              <p class="text-xs text-gray-500 mt-2">
-                ブラウザを切り替えて支払い検知が止まった場合は Reconnect を押してください。
+              <p class="text-xs text-gray-500 mt-2 text-center">
+                ブラウザを切り替えて支払い検知が止まった場合は
+                <button
+                  on:click={reconnectMonitoring}
+                  disabled={isReconnecting}
+                  class="text-xs text-gray-500 underline hover:text-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="WebSocket が切れた場合に再接続します"
+                >{isReconnecting ? 'Reconnecting...' : 'Reconnect'}</button>
+                を押してください。
               </p>
             {/if}
           </div>
