@@ -13,7 +13,10 @@ import {
   getDisplayNameFromKind0,
   getKind0FetchedAt,
 } from '$lib/nostr/profile.js';
-import { DEFAULT_FORTUNE_TEXTS_CSV } from '$lib/defaults.js';
+import {
+  DEFAULT_FORTUNE_TEXTS_CSV,
+  DEFAULT_NO_CONFETTI_TEXTS_CSV,
+} from '$lib/defaults.js';
 
 // フォームデータ
 let lightningAddress = '';
@@ -25,6 +28,7 @@ let pinCode = ''; // PIN設定用
 let fortuneMin = 1; // くじの最小値
 let fortuneMax = 20; // くじの最大値
 let fortuneTexts = ''; // くじの内容（カンマ区切り）
+let noConfettiTexts = ''; // 紙吹雪を出さないテキスト（カンマ区切り）
 let hideOmikujiMessage = false; // 紙のおみくじを促すメッセージと番号を非表示にする
 let testMode = false; // zapを介さずにくじを引けるテストモード
 let animationStyle: 'normal' | 'flashy' = 'normal'; // 演出スタイル
@@ -80,6 +84,7 @@ onMount(() => {
     const storedFortuneMax = localStorage.getItem('fortuneMax');
     fortuneMax = storedFortuneMax ? parseInt(storedFortuneMax, 10) : 20;
     fortuneTexts = localStorage.getItem('fortuneTexts') ?? DEFAULT_FORTUNE_TEXTS_CSV;
+    noConfettiTexts = localStorage.getItem('noConfettiTexts') ?? DEFAULT_NO_CONFETTI_TEXTS_CSV;
     hideOmikujiMessage = localStorage.getItem('hideOmikujiMessage') === 'true';
     testMode = localStorage.getItem('testMode') === 'true';
     const storedAnimationStyle = localStorage.getItem('animationStyle');
@@ -152,6 +157,7 @@ function handleSave() {
     localStorage.setItem('fortuneMin', fortuneMin.toString());
     localStorage.setItem('fortuneMax', fortuneMax.toString());
     localStorage.setItem('fortuneTexts', fortuneTexts);
+    localStorage.setItem('noConfettiTexts', noConfettiTexts);
     localStorage.setItem('hideOmikujiMessage', hideOmikujiMessage ? 'true' : 'false');
     localStorage.setItem('testMode', testMode ? 'true' : 'false');
     localStorage.setItem('animationStyle', animationStyle);
@@ -250,6 +256,7 @@ function handleClearData() {
     localStorage.removeItem('fortuneMin');
     localStorage.removeItem('fortuneMax');
     localStorage.removeItem('fortuneTexts');
+    localStorage.removeItem('noConfettiTexts');
     localStorage.removeItem('hideOmikujiMessage');
     localStorage.removeItem('testMode');
     localStorage.removeItem('animationStyle');
@@ -270,6 +277,7 @@ function handleClearData() {
     fortuneMin = 1;
     fortuneMax = 20;
     fortuneTexts = DEFAULT_FORTUNE_TEXTS_CSV;
+    noConfettiTexts = DEFAULT_NO_CONFETTI_TEXTS_CSV;
     hideOmikujiMessage = false;
     testMode = false;
     animationStyle = 'normal';
@@ -544,6 +552,23 @@ function handleClearData() {
             <p class="mt-1 text-sm text-gray-500">
               カンマ区切りでおみくじの内容を入力します。空欄の場合は数字のみ表示されます。<br/>
               数字が配列の長さを超える場合は、循環して表示されます。
+            </p>
+          </div>
+
+          <!-- 紙吹雪を出さないおみくじ -->
+          <div class="mt-4">
+            <label for="no-confetti-texts" class="block text-sm font-medium text-gray-700 mb-2">
+              紙吹雪を出さないおみくじ（オプション）
+            </label>
+            <textarea
+              id="no-confetti-texts"
+              bind:value={noConfettiTexts}
+              placeholder="凶,大凶"
+              rows="2"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            ></textarea>
+            <p class="mt-1 text-sm text-gray-500">
+              カンマ区切りで指定したテキストが当選した場合、派手モードでも紙吹雪を再生しません。
             </p>
           </div>
 
