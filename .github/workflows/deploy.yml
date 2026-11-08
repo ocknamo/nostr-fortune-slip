@@ -25,7 +25,10 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '22'
+          check-latest: true
           cache: 'npm'
+      - name: Use npm 12
+        run: npm install -g npm@12.2.2
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
